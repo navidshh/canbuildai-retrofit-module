@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CANBUILDAI: Retrofit Decision Maker</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- SheetJS library for Excel file generation -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏢 CANBUILDAI: Retrofit Decision Maker</h1>
+            <p>Building Energy Performance Predictor</p>
+        </header>
+
+        <div class="content">
+            <form id="buildingForm">
+                <!-- HVAC System Configuration -->
+                <section class="form-section">
+                    <h2>🔧 HVAC System Configuration</h2>
+                    
+                    <div class="form-group">
+                        <label for="ecm_system_name">
+                            Dominant HVAC System
+                            <span class="tooltip" data-tooltip="The primary heating, ventilation, and air conditioning system for the building">ℹ️</span>
+                        </label>
+                        <select id="ecm_system_name" name="ecm_system_name" required>
+                            <option value="">Select HVAC System...</option>
+                            <option value="NECB_Default">NECB Default</option>
+                            <option value="HS08_CCASHP_VRF">HS08 - Cold Climate ASHP VRF</option>
+                            <option value="HS09_CCASHP_Baseboard">HS09 - Cold Climate ASHP Baseboard</option>
+                            <option value="HS11_ASHP_PTHP">HS11 - ASHP Packaged Terminal</option>
+                            <option value="HS12_ASHP_Baseboard">HS12 - ASHP Baseboard</option>
+                            <option value="HS13_ASHP_VRF">HS13 - ASHP VRF</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="primary_heating_fuel">
+                            Primary Heating Fuel
+                            <span class="tooltip" data-tooltip="The main energy source for heating">ℹ️</span>
+                        </label>
+                        <select id="primary_heating_fuel" name="primary_heating_fuel" required>
+                            <option value="">Select Heating Fuel...</option>
+                            <option value="Electricity">Electricity</option>
+                            <option value="ElectricityHPElecBackup">Electricity (Heat Pump with Electric Backup)</option>
+                            <option value="NaturalGas">Natural Gas</option>
+                            <option value="FuelOilNo2">Fuel Oil No.2</option>
+                            <option value="Heatpump">Heat Pump</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="boiler_eff">
+                            Boiler Efficiency
+                            <span class="tooltip" data-tooltip="The efficiency rating of the boiler system">ℹ️</span>
+                        </label>
+                        <select id="boiler_eff" name="boiler_eff" required>
+                            <option value="">Select Boiler Efficiency...</option>
+                            <option value="NECB_Default" selected>NECB Default</option>
+                            <option value="NECB 88% Efficient Condensing Boiler">NECB 88% Efficient Condensing Boiler</option>
+                            <option value="Viessmann Vitocrossal 300 CT3-17 96.2% Efficient Condensing Gas Boiler">96.2% Efficient Condensing Gas Boiler</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="furnace_eff">
+                            Furnace Efficiency
+                            <span class="tooltip" data-tooltip="The efficiency rating of the furnace">ℹ️</span>
+                        </label>
+                        <select id="furnace_eff" name="furnace_eff" required>
+                            <option value="">Select Furnace Efficiency...</option>
+                            <option value="NECB_Default" selected>NECB Default</option>
+                            <option value="NECB 85% Efficient Condensing Gas Furnace">NECB 85% Efficient Condensing Gas Furnace</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shw_eff">
+                            Service Hot Water Efficiency
+                            <span class="tooltip" data-tooltip="The efficiency of the hot water heating system">ℹ️</span>
+                        </label>
+                        <select id="shw_eff" name="shw_eff" required>
+                            <option value="">Select SHW System...</option>
+                            <option value="NECB_Default" selected>NECB Default</option>
+                            <option value="Natural Gas Direct Vent with Electric Ignition">Natural Gas Direct Vent</option>
+                            <option value="Natural Gas Power Vent with Electric Ignition">Natural Gas Power Vent</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Ventilation Configuration -->
+                <section class="form-section">
+                    <h2>💨 Ventilation Configuration</h2>
+                    
+                    <div class="form-group">
+                        <label for="dcv_type">
+                            Demand Control Ventilation (DCV) Strategy
+                            <span class="tooltip" data-tooltip="Controls ventilation based on occupancy or CO2 levels">ℹ️</span>
+                        </label>
+                        <select id="dcv_type" name="dcv_type" required>
+                            <option value="">Select DCV Strategy...</option>
+                            <option value="No_DCV" selected>No DCV</option>
+                            <option value="Occupancy_based_DCV">Occupancy-Based DCV</option>
+                            <option value="CO2_based_DCV">CO2-Based DCV</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="erv_package">
+                            Energy Recovery Ventilator (ERV) Strategy
+                            <span class="tooltip" data-tooltip="Recovers energy from exhaust air to precondition incoming fresh air">ℹ️</span>
+                        </label>
+                        <select id="erv_package" name="erv_package" required>
+                            <option value="">Select ERV Strategy...</option>
+                            <option value="NECB_Default_All" selected>NECB Default (All)</option>
+                            <option value="Plate-All">Plate Heat Exchanger (All)</option>
+                            <option value="Plate-Existing">Plate Heat Exchanger (Existing Only)</option>
+                            <option value="Rotary-All">Rotary Heat Exchanger (All)</option>
+                            <option value="Rotary-Existing">Rotary Heat Exchanger (Existing Only)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="airloop_economizer_type">
+                            Economizer Type
+                            <span class="tooltip" data-tooltip="Uses outside air for free cooling when conditions are favorable">ℹ️</span>
+                        </label>
+                        <select id="airloop_economizer_type" name="airloop_economizer_type" required>
+                            <option value="">Select Economizer Type...</option>
+                            <option value="NECB_Default" selected>NECB Default</option>
+                            <option value="DifferentialDryBulb">Differential Dry Bulb</option>
+                            <option value="DifferentialEnthalpy">Differential Enthalpy</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nv_type">
+                            Natural Ventilation Strategy
+                            <span class="tooltip" data-tooltip="Allows natural airflow through operable windows">ℹ️</span>
+                        </label>
+                        <select id="nv_type" name="nv_type" required>
+                            <option value="">Select Natural Ventilation...</option>
+                            <option value="NECB_Default" selected>NECB Default (No Natural Ventilation)</option>
+                            <option value="add_nv">Add Natural Ventilation</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Building Envelope -->
+                <section class="form-section">
+                    <h2>🏠 Building Envelope</h2>
+                    
+                    <div class="form-group">
+                        <label for="ext_wall_cond">
+                            External Wall Thermal Conductance (W/m²·K)
+                            <span class="tooltip" data-tooltip="Lower values = better insulation. Range: 0.183 to 0.314">ℹ️</span>
+                        </label>
+                        <select id="ext_wall_cond" name="ext_wall_cond" required>
+                            <option value="">Select Wall Conductance...</option>
+                            <option value="0.183">0.183 (Best Insulation)</option>
+                            <option value="0.21">0.210</option>
+                            <option value="0.247">0.247</option>
+                            <option value="0.278">0.278</option>
+                            <option value="0.314">0.314 (Least Insulation)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ext_roof_cond">
+                            External Roof Thermal Conductance (W/m²·K)
+                            <span class="tooltip" data-tooltip="Lower values = better insulation. Range: 0.121 to 0.227">ℹ️</span>
+                        </label>
+                        <select id="ext_roof_cond" name="ext_roof_cond" required>
+                            <option value="">Select Roof Conductance...</option>
+                            <option value="0.121">0.121 (Best Insulation)</option>
+                            <option value="0.138">0.138</option>
+                            <option value="0.142">0.142</option>
+                            <option value="0.162">0.162</option>
+                            <option value="0.183">0.183</option>
+                            <option value="0.193">0.193</option>
+                            <option value="0.227">0.227 (Least Insulation)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fixed_window_cond">
+                            Window Thermal Conductance (W/m²·K)
+                            <span class="tooltip" data-tooltip="Lower values = better insulation. Typical range: 1.6 to 2.4">ℹ️</span>
+                        </label>
+                        <select id="fixed_window_cond" name="fixed_window_cond" required>
+                            <option value="">Select Window Conductance...</option>
+                            <option value="1.6">1.6 (Triple Glazed, Best)</option>
+                            <option value="2.2">2.2 (Double Glazed, Good)</option>
+                            <option value="2.4">2.4 (Double Glazed, Standard)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fixed_wind_solar_trans">
+                            Window Solar Heat Gain Coefficient (SHGC)
+                            <span class="tooltip" data-tooltip="Lower values block more solar heat. Range: 0.2 to 0.6">ℹ️</span>
+                        </label>
+                        <select id="fixed_wind_solar_trans" name="fixed_wind_solar_trans" required>
+                            <option value="">Select SHGC...</option>
+                            <option value="0.2">0.2 (Low Solar Gain)</option>
+                            <option value="0.3">0.3</option>
+                            <option value="0.4">0.4 (Moderate)</option>
+                            <option value="0.5">0.5</option>
+                            <option value="0.6">0.6 (High Solar Gain)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fdwr_set">
+                            Fenestration to Wall Ratio (FDWR)
+                            <span class="tooltip" data-tooltip="Percentage of wall area that is windows. Range: 0.1 to 0.69">ℹ️</span>
+                        </label>
+                        <select id="fdwr_set" name="fdwr_set" required>
+                            <option value="">Select FDWR...</option>
+                            <option value="0.1">0.1 (10% - Minimal Windows)</option>
+                            <option value="0.2">0.2 (20%)</option>
+                            <option value="0.3">0.3 (30%)</option>
+                            <option value="0.4">0.4 (40%)</option>
+                            <option value="0.5">0.5 (50%)</option>
+                            <option value="0.6">0.6 (60%)</option>
+                            <option value="0.69">0.69 (69% - Maximum Windows)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="srr_set">
+                            Skylight to Roof Ratio (SRR)
+                            <span class="tooltip" data-tooltip="Percentage of roof area that is skylights. Range: 0.03 to 0.1">ℹ️</span>
+                        </label>
+                        <select id="srr_set" name="srr_set" required>
+                            <option value="">Select SRR...</option>
+                            <option value="NECB_Default" selected>NECB Default (No Skylights)</option>
+                            <option value="0.03">0.03 (3%)</option>
+                            <option value="0.05">0.05 (5%)</option>
+                            <option value="0.08">0.08 (8%)</option>
+                            <option value="0.1">0.10 (10%)</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Building Configuration -->
+                <section class="form-section">
+                    <h2>📐 Building Configuration</h2>
+                    
+                    <div class="form-group">
+                        <label for="building_type">
+                            Building Type
+                            <span class="tooltip" data-tooltip="The type of building being modeled">ℹ️</span>
+                        </label>
+                        <select id="building_type" name="building_type" required>
+                            <option value="">Select Building Type...</option>
+                            <option value="MidriseApartment" selected>Midrise Apartment</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rotation_degrees">
+                            Building Rotation (degrees)
+                            <span class="tooltip" data-tooltip="Building orientation. 0° = North-facing, 90° = East-facing">ℹ️</span>
+                        </label>
+                        <select id="rotation_degrees" name="rotation_degrees" required>
+                            <option value="">Select Rotation...</option>
+                            <option value="0" selected>0° (North)</option>
+                            <option value="45">45° (Northeast)</option>
+                            <option value="90">90° (East)</option>
+                            <option value="180">180° (South)</option>
+                            <option value="270">270° (West)</option>
+                            <option value="359">359° (Almost North)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="epw_file">
+                            Weather Location (EPW File)
+                            <span class="tooltip" data-tooltip="The location's weather data for energy simulation">ℹ️</span>
+                        </label>
+                        <select id="epw_file" name="epw_file" required>
+                            <option value="">Select Location...</option>
+                            <option value="CAN_ON_Toronto.Pearson.Intl.AP.716240_CWEC2016.epw" selected>Toronto, ON - Pearson Int'l Airport</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pv_ground_type">
+                            Ground-Mounted PV Solar Panels
+                            <span class="tooltip" data-tooltip="Add photovoltaic solar panels on the ground">ℹ️</span>
+                        </label>
+                        <select id="pv_ground_type" name="pv_ground_type" required>
+                            <option value="">Select PV Configuration...</option>
+                            <option value="NECB_Default" selected>NECB Default (No PV Panels)</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        🚀 Generate Prediction
+                    </button>
+                    <button type="reset" class="btn btn-secondary">
+                        🔄 Reset Form
+                    </button>
+                </div>
+            </form>
+
+            <!-- Results Section -->
+            <div id="results" class="results-section" style="display: none;">
+                <h2>📊 Prediction Results</h2>
+                <div id="resultsContent"></div>
+                <button class="btn btn-secondary" onclick="hideResults()">Close Results</button>
+            </div>
+
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Generating predictions...</p>
+                    <p class="loading-subtext">This may take a few moments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
