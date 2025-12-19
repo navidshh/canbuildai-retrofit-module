@@ -46,7 +46,7 @@ document.getElementById('buildingForm').addEventListener('submit', async (e) => 
 // Generate Excel file from building configuration
 async function generateExcelFile(config) {
     // Load ALL default values from the first row of the sample Input.xlsx
-    const defaultsResponse = await fetch('/defaults_from_excel.json');
+    const defaultsResponse = await fetch('./defaults_from_excel.json');
     const allDefaults = await defaultsResponse.json();
     
     // Create a copy of all defaults
