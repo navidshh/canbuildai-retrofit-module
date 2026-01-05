@@ -9,6 +9,8 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <!-- jsPDF library for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Amazon Cognito Identity SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -23,6 +25,12 @@
                     <span class="badge">Real-time Analysis</span>
                     <span class="badge">NECB Compliant</span>
                 </div>
+            </div>
+            <div style="position: absolute; top: 20px; right: 20px;">
+                <span id="user-email" style="color: white; margin-right: 15px; font-size: 14px;"></span>
+                <button onclick="handleLogout()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
+                    🚪 Logout
+                </button>
             </div>
         </header>
 

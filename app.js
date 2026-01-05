@@ -3,6 +3,54 @@ const API_BASE_URL = 'https://08879hja2c.execute-api.ca-central-1.amazonaws.com/
 const BUCKET_NAME = 'btap-app-test3-dev-tgw-3-btap-v1-uploads';
 const AWS_REGION = 'ca-central-1';
 
+// Cognito Configuration
+const poolData = {
+    UserPoolId: 'ca-central-1_NHVo7D7Kw',
+    ClientId: '1bba66drbfqk7rgnq0h13mf56l'
+};
+
+// Check authentication on page load
+function checkAuthentication() {
+    const accessToken = sessionStorage.getItem('accessToken');
+    const idToken = sessionStorage.getItem('idToken');
+    const userEmail = sessionStorage.getItem('userEmail');
+    
+    if (!accessToken || !idToken) {
+        // Not authenticated, redirect to login
+        window.location.href = 'auth.html';
+        return false;
+    }
+    
+    // Display user email
+    if (userEmail) {
+        document.getElementById('user-email').textContent = userEmail;
+    }
+    
+    return true;
+}
+
+// Handle logout
+function handleLogout() {
+    // Clear session storage
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('idToken');
+    sessionStorage.removeItem('userEmail');
+    
+    // Redirect to login page
+    window.location.href = 'auth.html';
+}
+
+// Get auth token for API requests
+function getAuthToken() {
+    return sessionStorage.getItem('idToken');
+}
+
+// Check auth on page load
+if (!checkAuthentication()) {
+    // Stop script execution if not authenticated
+    throw new Error('Not authenticated');
+}
+
 // Form handling
 document.getElementById('buildingForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -226,6 +274,9 @@ async function uploadAndPredict(fileBlob) {
     // Upload file
     const uploadResponse = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+        },
         body: uploadFormData
     });
     
@@ -245,6 +296,9 @@ async function uploadAndPredict(fileBlob) {
     
     const predictResponse = await fetch(`${API_BASE_URL}/run-model-s3`, {
         method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+        },
         body: predictFormData
     });
     
@@ -272,6 +326,9 @@ async function uploadAndPredict(fileBlob) {
             // Download output.json
             const downloadResponse = await fetch(`${API_BASE_URL}/download-result`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${getAuthToken()}`
+                },
                 body: downloadFormData
             });
             
