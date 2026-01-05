@@ -345,7 +345,13 @@ function displayResults(results) {
         return;
     }
     
-    let htmlContent = '<div class="result-grid">';
+    let htmlContent = `
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+            <button onclick="downloadSinglePDFReport()" class="btn btn-primary" style="padding: 10px 20px; font-size: 14px;">
+                📄 Download PDF Report
+            </button>
+        </div>
+        <div class="result-grid">`;
     
     // Check if we have energy_aggregated_results and costing_results
     if (results.energy_aggregated_results && results.energy_aggregated_results.length > 0 &&
@@ -383,10 +389,10 @@ function displayResults(results) {
         htmlContent += `
             <div class="result-card highlight">
                 <h4>🔋 Total Energy Use Intensity</h4>
-                <div class="value">${totalEnergyGJ}</div>
+                <div class="value">${totalEnergyGJ.toFixed(7)}</div>
                 <div class="unit">GJ/m²</div>
-                <p class="subtext">Electricity: ${electricityGJ} GJ/m²</p>
-                <p class="subtext">Natural Gas: ${gasGJ} GJ/m²</p>
+                <p class="subtext">Electricity: ${electricityGJ.toFixed(7)} GJ/m²</p>
+                <p class="subtext">Natural Gas: ${gasGJ.toFixed(7)} GJ/m²</p>
             </div>
             <div class="result-card highlight">
                 <h4>💰 Total Equipment Cost</h4>
@@ -431,10 +437,15 @@ function displayResults(results) {
         `;
     }
     
-    htmlContent += '</div>';
+    htmlContent += '</div></div>';
     
     resultsContent.innerHTML = htmlContent;
     resultsSection.style.display = 'block';
+    
+    // Store data for single prediction PDF generation
+    if (results.energy_aggregated_results && results.costing_results) {
+        storeSinglePredictionForPDF(results);
+    }
     
     // Smooth scroll to results
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -908,12 +919,180 @@ function drawCostChart(configs) {
 let globalConfigs = null;
 let globalParameterDisplayName = null;
 let globalResults = null;
+let globalSinglePrediction = null;
 
 // Update the displayAlternativeResults to store configs globally
 function storeConfigsForPDF(configs, parameterDisplayName, results) {
     globalConfigs = configs;
     globalParameterDisplayName = parameterDisplayName;
     globalResults = results;
+}
+
+// Store single prediction data for PDF generation
+function storeSinglePredictionForPDF(results) {
+    const energyData = results.energy_aggregated_results[0];
+    const costData = results.costing_results[0];
+    
+    globalSinglePrediction = {
+        electricityGJ: energyData["Predicted Electricity Energy Total (Gigajoules per square meter)"] || 0,
+        gasGJ: energyData["Predicted Gas Energy Total (Gigajoules per square meter)"] || 0,
+        totalEnergyGJ: (energyData["Predicted Electricity Energy Total (Gigajoules per square meter)"] || 0) + (energyData["Predicted Gas Energy Total (Gigajoules per square meter)"] || 0),
+        envelopeCost: costData["Predicted cost_equipment_envelope_total_cost_per_m_sq"] || 0,
+        hvacCost: costData["Predicted cost_equipment_heating_and_cooling_total_cost_per_m_sq"] || 0,
+        lightingCost: costData["Predicted cost_equipment_lighting_total_cost_per_m_sq"] || 0,
+        ventilationCost: costData["Predicted cost_equipment_ventilation_total_cost_per_m_sq"] || 0,
+        shwCost: costData["Predicted cost_equipment_shw_total_cost_per_m_sq"] || 0,
+        metadata: results.building_metadata
+    };
+    globalSinglePrediction.totalCost = globalSinglePrediction.envelopeCost + globalSinglePrediction.hvacCost + 
+                                       globalSinglePrediction.lightingCost + globalSinglePrediction.ventilationCost + 
+                                       globalSinglePrediction.shwCost;
+}
+
+// Download PDF Report for Single Prediction
+async function downloadSinglePDFReport() {
+    if (!globalSinglePrediction) {
+        alert('No data available to generate report');
+        return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPos = 20;
+    
+    // Add logo and letterhead
+    doc.setFillColor(102, 126, 234);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CANBUILDAI', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Building Design Decision Maker', pageWidth / 2, 28, { align: 'center' });
+    doc.text('Single Building Prediction Report', pageWidth / 2, 35, { align: 'center' });
+    
+    yPos = 50;
+    
+    // Report Title
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Building Performance Prediction Report', 15, yPos);
+    yPos += 10;
+    
+    // Date
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 15, yPos);
+    yPos += 10;
+    
+    // Building Information Section
+    if (globalSinglePrediction.metadata) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Building Information', 15, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const metadata = globalSinglePrediction.metadata;
+        doc.text(`Floor Area: ${metadata.floor_area?.toFixed(0) || 'N/A'} m²`, 20, yPos);
+        yPos += 5;
+        doc.text(`Building Type: ${metadata.building_type || 'N/A'}`, 20, yPos);
+        yPos += 5;
+        doc.text(`Location: ${metadata.location || 'N/A'}`, 20, yPos);
+        yPos += 15;
+    }
+    
+    // Energy Performance Section
+    doc.setFillColor(102, 126, 234);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(15, yPos, pageWidth - 30, 10, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Energy Performance', 20, yPos + 6.5);
+    yPos += 15;
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Energy Use Intensity: ${globalSinglePrediction.totalEnergyGJ.toFixed(7)} GJ/m²`, 20, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Energy Breakdown:', 20, yPos);
+    yPos += 6;
+    doc.text(`  • Electricity: ${globalSinglePrediction.electricityGJ.toFixed(7)} GJ/m²`, 25, yPos);
+    yPos += 5;
+    doc.text(`  • Natural Gas: ${globalSinglePrediction.gasGJ.toFixed(7)} GJ/m²`, 25, yPos);
+    yPos += 15;
+    
+    // Cost Analysis Section
+    doc.setFillColor(72, 187, 120);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(15, yPos, pageWidth - 30, 10, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Equipment Cost Analysis', 20, yPos + 6.5);
+    yPos += 15;
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Equipment Cost: $${globalSinglePrediction.totalCost.toFixed(2)}/m²`, 20, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Cost Breakdown by Component:', 20, yPos);
+    yPos += 6;
+    doc.text(`  • Envelope: $${globalSinglePrediction.envelopeCost.toFixed(2)}/m²`, 25, yPos);
+    yPos += 5;
+    doc.text(`  • HVAC (Heating & Cooling): $${globalSinglePrediction.hvacCost.toFixed(2)}/m²`, 25, yPos);
+    yPos += 5;
+    doc.text(`  • Lighting: $${globalSinglePrediction.lightingCost.toFixed(2)}/m²`, 25, yPos);
+    yPos += 5;
+    doc.text(`  • Ventilation: $${globalSinglePrediction.ventilationCost.toFixed(2)}/m²`, 25, yPos);
+    yPos += 5;
+    doc.text(`  • Service Hot Water: $${globalSinglePrediction.shwCost.toFixed(2)}/m²`, 25, yPos);
+    yPos += 15;
+    
+    // Summary Section
+    doc.setFillColor(102, 126, 234);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(15, yPos, pageWidth - 30, 10, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Performance Summary', 20, yPos + 6.5);
+    yPos += 15;
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('This report provides a comprehensive analysis of the predicted building performance', 20, yPos);
+    yPos += 5;
+    doc.text('based on the selected configuration parameters. The energy use intensity reflects', 20, yPos);
+    yPos += 5;
+    doc.text('the total annual energy consumption per square meter, while equipment costs', 20, yPos);
+    yPos += 5;
+    doc.text('represent the capital investment required for each building system.', 20, yPos);
+    
+    // Add footer
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(128, 128, 128);
+    doc.text('Page 1 of 1', pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text('CANBUILDAI - Building Design Decision Maker', pageWidth / 2, pageHeight - 6, { align: 'center' });
+    
+    // Save the PDF
+    const fileName = `CANBUILDAI_Single_Prediction_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
 }
 
 // Download PDF Report
