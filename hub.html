@@ -1,0 +1,384 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CANBUILDAI - AI Ecosystem Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
+    <style>
+        .hub-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hub-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            margin-bottom: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hub-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        .hub-logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            max-height: 80px;
+            max-width: 250px;
+            height: auto;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.1));
+            z-index: 2;
+        }
+
+        .hub-header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hub-header h1 {
+            color: #2d3748;
+            font-size: 42px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .hub-header p {
+            color: #4a5568;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 2;
+        }
+
+        .user-email {
+            color: white;
+            background: rgba(102, 126, 234, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-logout {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            padding: 20px;
+        }
+
+        .module-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid transparent;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .module-card:hover::before {
+            opacity: 1;
+        }
+
+        .module-card.active {
+            border-color: #667eea;
+            box-shadow: 0 15px 50px rgba(102, 126, 234, 0.3);
+        }
+
+        .module-card.active:hover {
+            transform: translateY(-8px) scale(1.02);
+        }
+
+        .module-card.inactive {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .module-card.inactive:hover {
+            transform: none;
+        }
+
+        .module-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-description {
+            font-size: 14px;
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-status {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-status.active {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .module-status.coming-soon {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .module-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            z-index: 1;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        @media (max-width: 768px) {
+            .modules-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hub-header h1 {
+                font-size: 28px;
+            }
+            
+            .user-info {
+                position: static;
+                justify-content: center;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hub-container">
+        <header class="hub-header">
+            <img src="Logo.jpg" alt="CANBUILDAI Logo" class="hub-logo" onerror="this.style.display='none'">
+            <div class="user-info">
+                <span id="user-email" class="user-email"></span>
+                <button onclick="handleLogout()" class="btn-logout">Logout</button>
+            </div>
+            <div class="hub-header-content">
+                <h1>CANBUILDAI</h1>
+                <p>Intelligent Building Energy Solutions for Canadian Infrastructure</p>
+                <div class="header-badges">
+                    <span class="badge">AI-Powered Analytics</span>
+                    <span class="badge">8 Integrated Modules</span>
+                    <span class="badge">Canadian Standards</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="modules-grid">
+            <div class="module-card active" onclick="navigateToModule('surrogate-model.html')">
+                <div class="module-badge">ACTIVE</div>
+                <span class="module-icon">&#9889;</span>
+                <h3 class="module-title">Annual Building Energy Surrogate Model</h3>
+                <p class="module-description">
+                    Ensemble learning algorithms for rapid prediction of annual building energy performance. 
+                    Fast, accurate energy forecasting for decision-making.
+                </p>
+                <span class="module-status active">Available Now</span>
+            </div>
+
+            <div class="module-card inactive">
+                <span class="module-icon">&#128200;</span>
+                <h3 class="module-title">Time Domain Surrogate & Inverse Optimization</h3>
+                <p class="module-description">
+                    Hourly resolution models for peak shaving and demand response strategies. 
+                    Optimize energy usage patterns in real-time.
+                </p>
+                <span class="module-status coming-soon">Coming Soon</span>
+            </div>
+
+            <div class="module-card inactive">
+                <span class="module-icon">&#127777;</span>
+                <h3 class="module-title">Overheating Prediction Surrogate Models</h3>
+                <p class="module-description">
+                    Predict indoor overheating risks with advanced thermal comfort modeling. 
+                    Ensure occupant comfort and building safety.
+                </p>
+                <span class="module-status coming-soon">Coming Soon</span>
+            </div>
+
+            <div class="module-card inactive">
+                <span class="module-icon">&#127960;</span>
+                <h3 class="module-title">Calibrated Cluster-Based Surrogate Models</h3>
+                <p class="module-description">
+                    Model calibration per Canadian housing clusters for residential and urban scale analysis. 
+                    Tailored to regional building characteristics.
+                </p>
+                <span class="module-status coming-soon">Coming Soon</span>
+            </div>
+
+            <div class="module-card inactive">
+                <span class="module-icon">&#128295;</span>
+                <h3 class="module-title">Retrofit Planner</h3>
+                <p class="module-description">
+                    Canadianized ComStock for commercial buildings across Canada. 
+                    Calculate energy and carbon emission savings for retrofit projects.
+                </p>
+                <span class="module-status coming-soon">Coming Soon</span>
+            </div>
+
+            <div class="module-card inactive">
+                <span class="module-icon">&#128190;</span>
+                <h3 class="module-title">Building Simulation Data Warehouse</h3>
+                <p class="module-description">
+                    Comprehensive building simulation database across Canada. 
+                    Access validated energy models and performance data.
+                </p>
+                <span class="module-status coming-soon">Coming Soon</span>
+            </div>
+
+            <div class="module-card inactive">
+                <span class="module-icon">&#129302;</span>
+                <h3 class="module-title">RAG-Based LLM Assistant</h3>
+                <p class="module-description">
+                    Retrieval-augmented generation for interactive queries on building simulation data. 
+                    Conversational AI for insights and recommendations.
+                </p>
+                <span class="module-status coming-soon">Coming Soon</span>
+            </div>
+
+            <div class="module-card inactive">
+                <span class="module-icon">&#127919;</span>
+                <h3 class="module-title">Agentic AI Orchestrator</h3>
+                <p class="module-description">
+                    End-to-end automation of modules with intelligent result validation. 
+                    Autonomous workflow management across the entire ecosystem.
+                </p>
+                <span class="module-status coming-soon">Coming Soon</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const poolData = {
+            UserPoolId: 'ca-central-1_NHVo7D7Kw',
+            ClientId: '1bba66drbfqk7rgnq0h13mf56l'
+        };
+
+        function checkAuthentication() {
+            const accessToken = sessionStorage.getItem('accessToken');
+            const idToken = sessionStorage.getItem('idToken');
+            const userEmail = sessionStorage.getItem('userEmail');
+            
+            if (!accessToken || !idToken) {
+                window.location.href = 'auth.html';
+                return false;
+            }
+            
+            if (userEmail) {
+                document.getElementById('user-email').textContent = userEmail;
+            }
+            
+            return true;
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('idToken');
+            sessionStorage.removeItem('userEmail');
+            window.location.href = 'auth.html';
+        }
+
+        function navigateToModule(moduleUrl) {
+            if (moduleUrl) {
+                window.location.href = moduleUrl;
+            }
+        }
+
+        checkAuthentication();
+    </script>
+</body>
+</html>

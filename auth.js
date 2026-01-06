@@ -101,8 +101,8 @@ async function handleLogin(event) {
         sessionStorage.setItem('idToken', data.AuthenticationResult.IdToken);
         sessionStorage.setItem('userEmail', email);
         
-        // Redirect to main app
-        window.location.href = 'index.html';
+        // Redirect to hub
+        window.location.href = 'hub.html';
         
     } catch (error) {
         console.error('Login failed:', error);
@@ -189,8 +189,8 @@ async function handleNewPassword() {
         sessionStorage.removeItem('tempSession');
         sessionStorage.removeItem('tempEmail');
         
-        // Redirect to main app
-        window.location.href = 'index.html';
+        // Redirect to hub
+        window.location.href = 'hub.html';
         
     } catch (error) {
         console.error('Failed to set password:', error);
@@ -312,8 +312,8 @@ function checkAuth() {
     const idToken = sessionStorage.getItem('idToken');
     
     if (accessToken && idToken) {
-        // User is logged in, redirect to main app
-        window.location.href = 'index.html';
+        // User is logged in, redirect to hub
+        window.location.href = 'hub.html';
     }
 }
 
