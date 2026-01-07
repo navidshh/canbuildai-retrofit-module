@@ -123,8 +123,17 @@ document.getElementById('buildingForm').addEventListener('submit', async (e) => 
 // Generate Excel file from building configuration
 async function generateExcelFile(config) {
     // Load ALL default values from the first row of the sample Input.xlsx
-    const defaultsResponse = await fetch('./defaults_from_excel.json');
-    const allDefaults = await defaultsResponse.json();
+    let allDefaults;
+    try {
+        const defaultsResponse = await fetch('./defaults_from_excel.json');
+        if (!defaultsResponse.ok) {
+            throw new Error(`Failed to load defaults_from_excel.json: ${defaultsResponse.status} ${defaultsResponse.statusText}`);
+        }
+        allDefaults = await defaultsResponse.json();
+    } catch (error) {
+        console.error('Error loading defaults:', error);
+        throw new Error(`Failed to load configuration defaults: ${error.message}`);
+    }
     
     // Create a copy of all defaults
     const row = { ...allDefaults };
@@ -174,8 +183,17 @@ async function generateExcelFile(config) {
 // Generate Excel file with multiple configurations for alternative analysis
 async function generateMultiConfigExcelFile(config, variableParameter) {
     // Load ALL default values from the first row of the sample Input.xlsx
-    const defaultsResponse = await fetch('./defaults_from_excel.json');
-    const allDefaults = await defaultsResponse.json();
+    let allDefaults;
+    try {
+        const defaultsResponse = await fetch('./defaults_from_excel.json');
+        if (!defaultsResponse.ok) {
+            throw new Error(`Failed to load defaults_from_excel.json: ${defaultsResponse.status} ${defaultsResponse.statusText}`);
+        }
+        allDefaults = await defaultsResponse.json();
+    } catch (error) {
+        console.error('Error loading defaults:', error);
+        throw new Error(`Failed to load configuration defaults: ${error.message}`);
+    }
     
     console.log('Generating configurations for parameter:', variableParameter);
     
@@ -272,13 +290,19 @@ async function uploadAndPredict(fileBlob) {
     uploadFormData.append('email', uniqueEmail);
     
     // Upload file
-    const uploadResponse = await fetch(`${API_BASE_URL}/upload`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${getAuthToken()}`
-        },
-        body: uploadFormData
-    });
+    let uploadResponse;
+    try {
+        uploadResponse = await fetch(`${API_BASE_URL}/upload`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${getAuthToken()}`
+            },
+            body: uploadFormData
+        });
+    } catch (error) {
+        console.error('Network error during upload:', error);
+        throw new Error(`Network error during file upload: ${error.message}. Please check your internet connection.`);
+    }
     
     if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
