@@ -3,6 +3,9 @@ const API_BASE_URL = 'https://08879hja2c.execute-api.ca-central-1.amazonaws.com/
 const BUCKET_NAME = 'btap-app-test3-dev-tgw-3-btap-v1-uploads';
 const AWS_REGION = 'ca-central-1';
 
+// Global storage for input parameters (for PDF reports)
+let globalInputConfig = null;
+
 // Cognito Configuration
 const poolData = {
     UserPoolId: 'ca-central-1_NHVo7D7Kw',
@@ -102,6 +105,17 @@ document.getElementById('buildingForm').addEventListener('submit', async (e) => 
     console.log('Analysis Type:', analysisType);
     console.log('Variable Parameter:', variableParameter);
     console.log('Range Type:', rangeType);
+    
+    // Store input configuration globally for PDF reports
+    globalInputConfig = { ...buildingConfig };
+    // Remove ':' prefix for cleaner display
+    Object.keys(globalInputConfig).forEach(key => {
+        if (key.startsWith(':')) {
+            const cleanKey = key.substring(1);
+            globalInputConfig[cleanKey] = globalInputConfig[key];
+            delete globalInputConfig[key];
+        }
+    });
     
     // Validate cost analysis inputs
     if (analysisType === 'cost') {
@@ -240,12 +254,12 @@ async function generateExcelFile(config) {
     console.log('Config received:', config);
     console.log('Config keys:', Object.keys(config));
     
-    // Override with user-selected values (the 19 configurable parameters)
+    // Override with user-selected values (the 18 configurable parameters)
     const userParams = [
         'ecm_system_name', 'primary_heating_fuel', 'boiler_eff', 'furnace_eff', 'shw_eff',
         'dcv_type', 'erv_package', 'airloop_economizer_type', 'nv_type',
         'ext_wall_cond', 'ext_roof_cond', 'fixed_window_cond', 'fixed_wind_solar_trans', 'fdwr_set',
-        'srr_set', 'building_type', 'rotation_degrees', 'epw_file', 'pv_ground_type'
+        'srr_set', 'building_type', 'rotation_degrees', 'epw_file'
     ];
     
     let updatedCount = 0;
@@ -716,6 +730,25 @@ async function uploadAndPredict(fileBlob) {
                 console.log('Energy data sample:', predictions.energy_aggregated_results?.[0]);
                 console.log('Cost data sample:', predictions.costing_results?.[0]);
                 
+                // Sanitize energy values - convert negative values to zero
+                // This can happen when ML model predicts very small negative values (numerical precision issues)
+                if (predictions.energy_aggregated_results) {
+                    predictions.energy_aggregated_results.forEach(result => {
+                        // Check electricity energy
+                        if (result["Predicted Electricity Energy Total (Gigajoules per square meter)"] < 0) {
+                            console.warn('Negative electricity value detected, converting to 0:', 
+                                result["Predicted Electricity Energy Total (Gigajoules per square meter)"]);
+                            result["Predicted Electricity Energy Total (Gigajoules per square meter)"] = 0;
+                        }
+                        // Check gas energy
+                        if (result["Predicted Gas Energy Total (Gigajoules per square meter)"] < 0) {
+                            console.warn('Negative gas value detected, converting to 0:', 
+                                result["Predicted Gas Energy Total (Gigajoules per square meter)"]);
+                            result["Predicted Gas Energy Total (Gigajoules per square meter)"] = 0;
+                        }
+                    });
+                }
+                
                 // Extract building metadata from the backend response
                 // The backend now includes metadata in energy_aggregated_results and costing_results
                 const energyData = predictions.energy_aggregated_results?.[0] || {};
@@ -915,9 +948,37 @@ function displayCostAnalysisResults(results) {
     const parameterDisplayName = parameterNames[parameter] || parameter;
     
     // Determine if this is a good investment
-    const isGoodInvestment = economics.simplePaybackYears <= economics.analysisYears && economics.roi > 0;
+    const isFeasible = economics.totalAnnualSavings > 0 && economics.retrofitCost > 0;
+    const hasPayback = isFeasible && economics.simplePaybackYears <= economics.analysisYears;
+    const isGoodInvestment = hasPayback && economics.roi > 0;
+    
+    // Determine display values for payback and ROI
+    let paybackDisplay, paybackUnit, paybackSubtext;
+    if (!isFeasible || economics.totalAnnualSavings <= 0) {
+        paybackDisplay = 'No Payback';
+        paybackUnit = '';
+        paybackSubtext = 'Retrofit increases costs';
+    } else if (economics.simplePaybackYears > economics.analysisYears * 2) {
+        paybackDisplay = 'Not Feasible';
+        paybackUnit = '';
+        paybackSubtext = `>${economics.analysisYears * 2} years`;
+    } else {
+        paybackDisplay = economics.simplePaybackYears.toFixed(1);
+        paybackUnit = 'years';
+        paybackSubtext = 'Time to recover investment';
+    }
+    
+    let roiDisplay, roiUnit;
+    if (!isFeasible || economics.roi < 0) {
+        roiDisplay = 'Not Feasible';
+        roiUnit = '';
+    } else {
+        roiDisplay = economics.roi.toFixed(1) + '%';
+        roiUnit = `over ${economics.analysisYears} years`;
+    }
+    
     const statusEmoji = isGoodInvestment ? '✅' : '⚠️';
-    const statusText = isGoodInvestment ? 'Financially Viable' : 'Review Carefully';
+    const statusText = isGoodInvestment ? 'Financially Viable' : 'Not Recommended';
     
     let htmlContent = `
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
@@ -936,17 +997,17 @@ function displayCostAnalysisResults(results) {
         </div>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
-            <div class="result-card" style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); border: 2px solid #667eea;">
+            <div class="result-card" style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); border: 2px solid ${isFeasible ? '#667eea' : '#f56565'};">
                 <h4>💵 Simple Payback Period</h4>
-                <div class="value" style="font-size: 2.5em; color: #667eea;">${economics.simplePaybackYears.toFixed(1)}</div>
-                <div class="unit">years</div>
-                <p class="subtext">Time to recover investment</p>
+                <div class="value" style="font-size: ${typeof paybackDisplay === 'string' && paybackDisplay.includes('Feasible') ? '1.8em' : '2.5em'}; color: ${isFeasible ? '#667eea' : '#f56565'};">${paybackDisplay}</div>
+                <div class="unit">${paybackUnit}</div>
+                <p class="subtext">${paybackSubtext}</p>
             </div>
             
-            <div class="result-card" style="background: linear-gradient(135deg, #48bb7820 0%, #38a16920 100%); border: 2px solid #48bb78;">
+            <div class="result-card" style="background: linear-gradient(135deg, #48bb7820 0%, #38a16920 100%); border: 2px solid ${economics.roi >= 0 ? '#48bb78' : '#f56565'};">
                 <h4>📈 Return on Investment (ROI)</h4>
-                <div class="value" style="font-size: 2.5em; color: #48bb78;">${economics.roi.toFixed(1)}%</div>
-                <div class="unit">over ${economics.analysisYears} years</div>
+                <div class="value" style="font-size: ${typeof roiDisplay === 'string' && roiDisplay.includes('Feasible') ? '1.8em' : '2.5em'}; color: ${economics.roi >= 0 ? '#48bb78' : '#f56565'};">${roiDisplay}</div>
+                <div class="unit">${roiUnit}</div>
                 <p class="subtext">Total return on investment</p>
             </div>
             
@@ -1618,6 +1679,72 @@ async function downloadCostAnalysisPDFReport() {
     doc.text(`Improved Value: ${results.improvedValue}`, 15, yPos);
     yPos += 12;
     
+    // Input Parameters Section (if available)
+    if (globalInputConfig && Object.keys(globalInputConfig).length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Configuration Parameters', 15, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        // Parameter display names
+        const parameterLabels = {
+            'ecm_system_name': 'HVAC System',
+            'primary_heating_fuel': 'Primary Heating Fuel',
+            'boiler_eff': 'Boiler Efficiency',
+            'furnace_eff': 'Furnace Efficiency',
+            'shw_eff': 'Hot Water Efficiency',
+            'dcv_type': 'Demand Control Ventilation',
+            'erv_package': 'Energy Recovery Ventilator',
+            'airloop_economizer_type': 'Economizer Type',
+            'nv_type': 'Natural Ventilation',
+            'ext_wall_cond': 'Wall Conductance (W/m²·K)',
+            'ext_roof_cond': 'Roof Conductance (W/m²·K)',
+            'fixed_window_cond': 'Window Conductance (W/m²·K)',
+            'fixed_wind_solar_trans': 'Window SHGC',
+            'fdwr_set': 'Window-to-Wall Ratio',
+            'srr_set': 'Skylight-to-Roof Ratio',
+            'building_type': 'Building Type',
+            'rotation_degrees': 'Building Rotation (°)',
+            'epw_file': 'Weather Location'
+        };
+        
+        let col = 0;
+        const colWidth = (pageWidth - 30) / 2;
+        const startX = [15, 15 + colWidth];
+        
+        Object.keys(globalInputConfig).forEach((key, index) => {
+            // Check if need new page
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            const label = parameterLabels[key] || key;
+            let value = globalInputConfig[key];
+            
+            // Shorten long values
+            if (typeof value === 'string' && value.length > 25) {
+                value = value.substring(0, 22) + '...';
+            }
+            
+            doc.text(`${label}:`, startX[col], yPos);
+            doc.setFont('helvetica', 'bold');
+            doc.text(String(value), startX[col] + 45, yPos);
+            doc.setFont('helvetica', 'normal');
+            
+            col = (col + 1) % 2;
+            if (col === 0) {
+                yPos += 4.5;
+            }
+        });
+        
+        if (col !== 0) yPos += 4.5;
+        yPos += 10;
+    }
+    
     // Key Metrics
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
@@ -1720,6 +1847,72 @@ async function downloadSinglePDFReport() {
         yPos += 5;
         doc.text(`Location: ${metadata.location || 'N/A'}`, 20, yPos);
         yPos += 15;
+    }
+    
+    // Input Parameters Section (if available)
+    if (globalInputConfig && Object.keys(globalInputConfig).length > 0) {
+        // Check if we need to add a new page
+        if (yPos > 220) {
+            doc.addPage();
+            yPos = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Configuration Parameters', 15, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        // Parameter display names
+        const parameterLabels = {
+            'ecm_system_name': 'HVAC System',
+            'primary_heating_fuel': 'Primary Heating Fuel',
+            'boiler_eff': 'Boiler Efficiency',
+            'furnace_eff': 'Furnace Efficiency',
+            'shw_eff': 'Hot Water Efficiency',
+            'dcv_type': 'Demand Control Ventilation',
+            'erv_package': 'Energy Recovery Ventilator',
+            'airloop_economizer_type': 'Economizer Type',
+            'nv_type': 'Natural Ventilation',
+            'ext_wall_cond': 'Wall Conductance (W/m²·K)',
+            'ext_roof_cond': 'Roof Conductance (W/m²·K)',
+            'fixed_window_cond': 'Window Conductance (W/m²·K)',
+            'fixed_wind_solar_trans': 'Window SHGC',
+            'fdwr_set': 'Window-to-Wall Ratio',
+            'srr_set': 'Skylight-to-Roof Ratio',
+            'building_type': 'Building Type',
+            'rotation_degrees': 'Building Rotation (°)',
+            'epw_file': 'Weather Location'
+        };
+        
+        let col = 0;
+        const colWidth = (pageWidth - 30) / 2;
+        const startX = [20, 20 + colWidth + 10];
+        
+        Object.keys(globalInputConfig).forEach((key, index) => {
+            const label = parameterLabels[key] || key;
+            let value = globalInputConfig[key];
+            
+            // Shorten long values
+            if (typeof value === 'string' && value.length > 30) {
+                value = value.substring(0, 27) + '...';
+            }
+            
+            doc.text(`${label}:`, startX[col], yPos);
+            doc.setFont('helvetica', 'bold');
+            doc.text(String(value), startX[col] + 50, yPos);
+            doc.setFont('helvetica', 'normal');
+            
+            col = (col + 1) % 2;
+            if (col === 0) {
+                yPos += 5;
+            }
+        });
+        
+        if (col !== 0) yPos += 5;  // Add line if last entry was in right column
+        yPos += 10;
     }
     
     // Energy Performance Section

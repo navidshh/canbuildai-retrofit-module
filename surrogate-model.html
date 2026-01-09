@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CANBUILDAI: Annual Building Energy Surrogate Model</title>
+    <title>CANBUILDAI: Building Early Design Advisor</title>
     <link rel="stylesheet" href="styles.css">
     <!-- SheetJS library for Excel file generation -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -18,8 +18,8 @@
             <img src="Logo.jpg" alt="CANBUILDAI Logo" class="company-logo" onerror="this.style.display='none'">
             <div class="header-content">
                 <img src="building-icon.svg" alt="Building Design" class="building-icon" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect x=%2210%22 y=%2220%22 width=%2244%22 height=%2240%22 fill=%22%232a5298%22 stroke=%22%23667eea%22 stroke-width=%222%22/%3E%3Crect x=%2216%22 y=%2226%22 width=%228%22 height=%228%22 fill=%22%23667eea%22/%3E%3Crect x=%2228%22 y=%2226%22 width=%228%22 height=%228%22 fill=%22%23667eea%22/%3E%3Crect x=%2240%22 y=%2226%22 width=%228%22 height=%228%22 fill=%22%23667eea%22/%3E%3Crect x=%2216%22 y=%2238%22 width=%228%22 height=%228%22 fill=%22%23667eea%22/%3E%3Crect x=%2228%22 y=%2238%22 width=%228%22 height=%228%22 fill=%22%23667eea%22/%3E%3Crect x=%2240%22 y=%2238%22 width=%228%22 height=%228%22 fill=%22%23667eea%22/%3E%3Crect x=%2224%22 y=%2250%22 width=%2216%22 height=%2210%22 fill=%22%23f8f9ff%22/%3E%3C/svg%3E'">
-                <h1>Annual Building Energy Surrogate Model</h1>
-                <p class="tagline">Ensemble Learning for Fast Energy Performance Prediction</p>
+                <h1>Building Early Design Advisor</h1>
+                <p class="tagline">AI-Powered Energy Performance and Cost Analysis for Early Design</p>
                 <div class="header-badges">
                     <span class="badge">AI-Powered</span>
                     <span class="badge">Real-time Analysis</span>
@@ -39,6 +39,146 @@
 
         <div class="content">
             <form id="buildingForm">
+                <!-- Building Configuration -->
+                <section class="form-section">
+                    <h2>📐 Building Configuration</h2>
+                    
+                    <div class="form-group">
+                        <label for="building_type">
+                            Building Type
+                            <span class="tooltip" data-tooltip="The type of building being modeled">ℹ️</span>
+                        </label>
+                        <select id="building_type" name="building_type" required>
+                            <option value="">Select Building Type...</option>
+                            <option value="MidriseApartment" selected>Midrise Apartment</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rotation_degrees">
+                            Building Rotation (degrees)
+                            <span class="tooltip" data-tooltip="Building orientation. 0° = North-facing, 90° = East-facing">ℹ️</span>
+                        </label>
+                        <select id="rotation_degrees" name="rotation_degrees" required>
+                            <option value="">Select Rotation...</option>
+                            <option value="0" selected>0° (North)</option>
+                            <option value="45">45° (Northeast)</option>
+                            <option value="90">90° (East)</option>
+                            <option value="180">180° (South)</option>
+                            <option value="270">270° (West)</option>
+                            <option value="359">359° (Almost North)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="epw_file">
+                            Weather Location (EPW File)
+                            <span class="tooltip" data-tooltip="The location's weather data for energy simulation">ℹ️</span>
+                        </label>
+                        <select id="epw_file" name="epw_file" required>
+                            <option value="">Select Location...</option>
+                            <option value="CAN_ON_Toronto.Pearson.Intl.AP.716240_CWEC2016.epw" selected>Toronto, ON - Pearson Int'l Airport</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Building Envelope -->
+                <section class="form-section">
+                    <h2>🏠 Building Envelope</h2>
+                    
+                    <div class="form-group">
+                        <label for="ext_wall_cond">
+                            External Wall Thermal Conductance (W/m²·K)
+                            <span class="tooltip" data-tooltip="Lower values = better insulation. Range: 0.183 to 0.314">ℹ️</span>
+                        </label>
+                        <select id="ext_wall_cond" name="ext_wall_cond" required>
+                            <option value="">Select Wall Conductance...</option>
+                            <option value="0.183">0.183 (Best Insulation)</option>
+                            <option value="0.21">0.210</option>
+                            <option value="0.247">0.247</option>
+                            <option value="0.278">0.278</option>
+                            <option value="0.314">0.314 (Least Insulation)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ext_roof_cond">
+                            External Roof Thermal Conductance (W/m²·K)
+                            <span class="tooltip" data-tooltip="Lower values = better insulation. Range: 0.121 to 0.227">ℹ️</span>
+                        </label>
+                        <select id="ext_roof_cond" name="ext_roof_cond" required>
+                            <option value="">Select Roof Conductance...</option>
+                            <option value="0.121">0.121 (Best Insulation)</option>
+                            <option value="0.138">0.138</option>
+                            <option value="0.142">0.142</option>
+                            <option value="0.162">0.162</option>
+                            <option value="0.183">0.183</option>
+                            <option value="0.193">0.193</option>
+                            <option value="0.227">0.227 (Least Insulation)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fixed_window_cond">
+                            Window Thermal Conductance (W/m²·K)
+                            <span class="tooltip" data-tooltip="Lower values = better insulation. Typical range: 1.6 to 2.4">ℹ️</span>
+                        </label>
+                        <select id="fixed_window_cond" name="fixed_window_cond" required>
+                            <option value="">Select Window Conductance...</option>
+                            <option value="1.6">1.6 (Triple Glazed, Best)</option>
+                            <option value="2.2">2.2 (Double Glazed, Good)</option>
+                            <option value="2.4">2.4 (Double Glazed, Standard)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fixed_wind_solar_trans">
+                            Window Solar Heat Gain Coefficient (SHGC)
+                            <span class="tooltip" data-tooltip="Lower values block more solar heat. Range: 0.2 to 0.6">ℹ️</span>
+                        </label>
+                        <select id="fixed_wind_solar_trans" name="fixed_wind_solar_trans" required>
+                            <option value="">Select SHGC...</option>
+                            <option value="0.2">0.2 (Low Solar Gain)</option>
+                            <option value="0.3">0.3</option>
+                            <option value="0.4">0.4 (Moderate)</option>
+                            <option value="0.5">0.5</option>
+                            <option value="0.6">0.6 (High Solar Gain)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fdwr_set">
+                            Fenestration to Wall Ratio (FDWR)
+                            <span class="tooltip" data-tooltip="Percentage of wall area that is windows. Range: 0.1 to 0.69">ℹ️</span>
+                        </label>
+                        <select id="fdwr_set" name="fdwr_set" required>
+                            <option value="">Select FDWR...</option>
+                            <option value="0.1">0.1 (10% - Minimal Windows)</option>
+                            <option value="0.2">0.2 (20%)</option>
+                            <option value="0.3">0.3 (30%)</option>
+                            <option value="0.4">0.4 (40%)</option>
+                            <option value="0.5">0.5 (50%)</option>
+                            <option value="0.6">0.6 (60%)</option>
+                            <option value="0.69">0.69 (69% - Maximum Windows)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="srr_set">
+                            Skylight to Roof Ratio (SRR)
+                            <span class="tooltip" data-tooltip="Percentage of roof area that is skylights. Range: 0.03 to 0.1">ℹ️</span>
+                        </label>
+                        <select id="srr_set" name="srr_set" required>
+                            <option value="">Select SRR...</option>
+                            <option value="NECB_Default" selected>NECB Default (No Skylights)</option>
+                            <option value="0.03">0.03 (3%)</option>
+                            <option value="0.05">0.05 (5%)</option>
+                            <option value="0.08">0.08 (8%)</option>
+                            <option value="0.1">0.10 (10%)</option>
+                        </select>
+                    </div>
+                </section>
+
                 <!-- HVAC System Configuration -->
                 <section class="form-section">
                     <h2>🔧 HVAC System Configuration</h2>
@@ -51,11 +191,11 @@
                         <select id="ecm_system_name" name="ecm_system_name" required>
                             <option value="">Select HVAC System...</option>
                             <option value="NECB_Default">NECB Default</option>
-                            <option value="HS08_CCASHP_VRF">HS08 - Cold Climate ASHP VRF</option>
-                            <option value="HS09_CCASHP_Baseboard">HS09 - Cold Climate ASHP Baseboard</option>
-                            <option value="HS11_ASHP_PTHP">HS11 - ASHP Packaged Terminal</option>
-                            <option value="HS12_ASHP_Baseboard">HS12 - ASHP Baseboard</option>
-                            <option value="HS13_ASHP_VRF">HS13 - ASHP VRF</option>
+                            <option value="HS08_CCASHP_VRF">Cold Climate Air Source Heat Pump with VRF</option>
+                            <option value="HS09_CCASHP_Baseboard">Cold Climate Air Source Heat Pump with Baseboard</option>
+                            <option value="HS11_ASHP_PTHP">Air Source Heat Pump (Packaged Terminal)</option>
+                            <option value="HS12_ASHP_Baseboard">Air Source Heat Pump with Baseboard</option>
+                            <option value="HS13_ASHP_VRF">Air Source Heat Pump with VRF</option>
                         </select>
                     </div>
 
@@ -167,157 +307,6 @@
                             <option value="">Select Natural Ventilation...</option>
                             <option value="NECB_Default" selected>NECB Default (No Natural Ventilation)</option>
                             <option value="add_nv">Add Natural Ventilation</option>
-                        </select>
-                    </div>
-                </section>
-
-                <!-- Building Envelope -->
-                <section class="form-section">
-                    <h2>🏠 Building Envelope</h2>
-                    
-                    <div class="form-group">
-                        <label for="ext_wall_cond">
-                            External Wall Thermal Conductance (W/m²·K)
-                            <span class="tooltip" data-tooltip="Lower values = better insulation. Range: 0.183 to 0.314">ℹ️</span>
-                        </label>
-                        <select id="ext_wall_cond" name="ext_wall_cond" required>
-                            <option value="">Select Wall Conductance...</option>
-                            <option value="0.183">0.183 (Best Insulation)</option>
-                            <option value="0.21">0.210</option>
-                            <option value="0.247">0.247</option>
-                            <option value="0.278">0.278</option>
-                            <option value="0.314">0.314 (Least Insulation)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="ext_roof_cond">
-                            External Roof Thermal Conductance (W/m²·K)
-                            <span class="tooltip" data-tooltip="Lower values = better insulation. Range: 0.121 to 0.227">ℹ️</span>
-                        </label>
-                        <select id="ext_roof_cond" name="ext_roof_cond" required>
-                            <option value="">Select Roof Conductance...</option>
-                            <option value="0.121">0.121 (Best Insulation)</option>
-                            <option value="0.138">0.138</option>
-                            <option value="0.142">0.142</option>
-                            <option value="0.162">0.162</option>
-                            <option value="0.183">0.183</option>
-                            <option value="0.193">0.193</option>
-                            <option value="0.227">0.227 (Least Insulation)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fixed_window_cond">
-                            Window Thermal Conductance (W/m²·K)
-                            <span class="tooltip" data-tooltip="Lower values = better insulation. Typical range: 1.6 to 2.4">ℹ️</span>
-                        </label>
-                        <select id="fixed_window_cond" name="fixed_window_cond" required>
-                            <option value="">Select Window Conductance...</option>
-                            <option value="1.6">1.6 (Triple Glazed, Best)</option>
-                            <option value="2.2">2.2 (Double Glazed, Good)</option>
-                            <option value="2.4">2.4 (Double Glazed, Standard)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fixed_wind_solar_trans">
-                            Window Solar Heat Gain Coefficient (SHGC)
-                            <span class="tooltip" data-tooltip="Lower values block more solar heat. Range: 0.2 to 0.6">ℹ️</span>
-                        </label>
-                        <select id="fixed_wind_solar_trans" name="fixed_wind_solar_trans" required>
-                            <option value="">Select SHGC...</option>
-                            <option value="0.2">0.2 (Low Solar Gain)</option>
-                            <option value="0.3">0.3</option>
-                            <option value="0.4">0.4 (Moderate)</option>
-                            <option value="0.5">0.5</option>
-                            <option value="0.6">0.6 (High Solar Gain)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fdwr_set">
-                            Fenestration to Wall Ratio (FDWR)
-                            <span class="tooltip" data-tooltip="Percentage of wall area that is windows. Range: 0.1 to 0.69">ℹ️</span>
-                        </label>
-                        <select id="fdwr_set" name="fdwr_set" required>
-                            <option value="">Select FDWR...</option>
-                            <option value="0.1">0.1 (10% - Minimal Windows)</option>
-                            <option value="0.2">0.2 (20%)</option>
-                            <option value="0.3">0.3 (30%)</option>
-                            <option value="0.4">0.4 (40%)</option>
-                            <option value="0.5">0.5 (50%)</option>
-                            <option value="0.6">0.6 (60%)</option>
-                            <option value="0.69">0.69 (69% - Maximum Windows)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="srr_set">
-                            Skylight to Roof Ratio (SRR)
-                            <span class="tooltip" data-tooltip="Percentage of roof area that is skylights. Range: 0.03 to 0.1">ℹ️</span>
-                        </label>
-                        <select id="srr_set" name="srr_set" required>
-                            <option value="">Select SRR...</option>
-                            <option value="NECB_Default" selected>NECB Default (No Skylights)</option>
-                            <option value="0.03">0.03 (3%)</option>
-                            <option value="0.05">0.05 (5%)</option>
-                            <option value="0.08">0.08 (8%)</option>
-                            <option value="0.1">0.10 (10%)</option>
-                        </select>
-                    </div>
-                </section>
-
-                <!-- Building Configuration -->
-                <section class="form-section">
-                    <h2>📐 Building Configuration</h2>
-                    
-                    <div class="form-group">
-                        <label for="building_type">
-                            Building Type
-                            <span class="tooltip" data-tooltip="The type of building being modeled">ℹ️</span>
-                        </label>
-                        <select id="building_type" name="building_type" required>
-                            <option value="">Select Building Type...</option>
-                            <option value="MidriseApartment" selected>Midrise Apartment</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="rotation_degrees">
-                            Building Rotation (degrees)
-                            <span class="tooltip" data-tooltip="Building orientation. 0° = North-facing, 90° = East-facing">ℹ️</span>
-                        </label>
-                        <select id="rotation_degrees" name="rotation_degrees" required>
-                            <option value="">Select Rotation...</option>
-                            <option value="0" selected>0° (North)</option>
-                            <option value="45">45° (Northeast)</option>
-                            <option value="90">90° (East)</option>
-                            <option value="180">180° (South)</option>
-                            <option value="270">270° (West)</option>
-                            <option value="359">359° (Almost North)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="epw_file">
-                            Weather Location (EPW File)
-                            <span class="tooltip" data-tooltip="The location's weather data for energy simulation">ℹ️</span>
-                        </label>
-                        <select id="epw_file" name="epw_file" required>
-                            <option value="">Select Location...</option>
-                            <option value="CAN_ON_Toronto.Pearson.Intl.AP.716240_CWEC2016.epw" selected>Toronto, ON - Pearson Int'l Airport</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="pv_ground_type">
-                            Ground-Mounted PV Solar Panels
-                            <span class="tooltip" data-tooltip="Add photovoltaic solar panels on the ground">ℹ️</span>
-                        </label>
-                        <select id="pv_ground_type" name="pv_ground_type" required>
-                            <option value="">Select PV Configuration...</option>
-                            <option value="NECB_Default" selected>NECB Default (No PV Panels)</option>
                         </select>
                     </div>
                 </section>
@@ -436,11 +425,11 @@
                                 <select id="baselineValueSelect" name="baselineValueSelect" style="display: none;">
                                     <option value="">Select current system...</option>
                                     <option value="NECB_Default">NECB Default</option>
-                                    <option value="HS08_CCASHP_VRF">HS08 - Cold Climate ASHP VRF</option>
-                                    <option value="HS09_CCASHP_Baseboard">HS09 - Cold Climate ASHP Baseboard</option>
-                                    <option value="HS11_ASHP_PTHP">HS11 - ASHP Packaged Terminal</option>
-                                    <option value="HS12_ASHP_Baseboard">HS12 - ASHP Baseboard</option>
-                                    <option value="HS13_ASHP_VRF">HS13 - ASHP VRF</option>
+                                    <option value="HS08_CCASHP_VRF">Cold Climate Air Source Heat Pump with VRF</option>
+                                    <option value="HS09_CCASHP_Baseboard">Cold Climate Air Source Heat Pump with Baseboard</option>
+                                    <option value="HS11_ASHP_PTHP">Air Source Heat Pump (Packaged Terminal)</option>
+                                    <option value="HS12_ASHP_Baseboard">Air Source Heat Pump with Baseboard</option>
+                                    <option value="HS13_ASHP_VRF">Air Source Heat Pump with VRF</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -452,11 +441,11 @@
                                 <select id="improvedValueSelect" name="improvedValueSelect" style="display: none;">
                                     <option value="">Select improved system...</option>
                                     <option value="NECB_Default">NECB Default</option>
-                                    <option value="HS08_CCASHP_VRF">HS08 - Cold Climate ASHP VRF</option>
-                                    <option value="HS09_CCASHP_Baseboard">HS09 - Cold Climate ASHP Baseboard</option>
-                                    <option value="HS11_ASHP_PTHP">HS11 - ASHP Packaged Terminal</option>
-                                    <option value="HS12_ASHP_Baseboard">HS12 - ASHP Baseboard</option>
-                                    <option value="HS13_ASHP_VRF">HS13 - ASHP VRF</option>
+                                    <option value="HS08_CCASHP_VRF">Cold Climate Air Source Heat Pump with VRF</option>
+                                    <option value="HS09_CCASHP_Baseboard">Cold Climate Air Source Heat Pump with Baseboard</option>
+                                    <option value="HS11_ASHP_PTHP">Air Source Heat Pump (Packaged Terminal)</option>
+                                    <option value="HS12_ASHP_Baseboard">Air Source Heat Pump with Baseboard</option>
+                                    <option value="HS13_ASHP_VRF">Air Source Heat Pump with VRF</option>
                                 </select>
                             </div>
                         </div>
@@ -585,22 +574,42 @@
             });
         });
 
-        // Update suggested ranges based on parameter
+        // Update suggested ranges based on parameter with validation limits
         function updateSuggestedRanges(parameter) {
             const ranges = {
-                'ext_wall_cond': { min: 0.15, max: 0.35, step: 0.05 },
-                'ext_roof_cond': { min: 0.10, max: 0.25, step: 0.03 },
-                'fixed_window_cond': { min: 1.5, max: 4.0, step: 0.5 },
-                'fixed_wind_solar_trans': { min: 0.2, max: 0.7, step: 0.1 },
-                'fdwr_set': { min: 0.1, max: 0.7, step: 0.1 },
-                'srr_set': { min: 0.03, max: 0.15, step: 0.02 }
+                'ext_wall_cond': { min: 0.15, max: 0.35, step: 0.05, absMin: 0.10, absMax: 0.50 },
+                'ext_roof_cond': { min: 0.10, max: 0.25, step: 0.03, absMin: 0.08, absMax: 0.35 },
+                'fixed_window_cond': { min: 1.5, max: 4.0, step: 0.5, absMin: 0.8, absMax: 6.0 },
+                'fixed_wind_solar_trans': { min: 0.2, max: 0.7, step: 0.1, absMin: 0.1, absMax: 0.9 },
+                'fdwr_set': { min: 0.1, max: 0.7, step: 0.1, absMin: 0.05, absMax: 0.9 },
+                'srr_set': { min: 0.03, max: 0.15, step: 0.02, absMin: 0.0, absMax: 0.2 }
             };
             
+            const minInput = document.getElementById('customMin');
+            const maxInput = document.getElementById('customMax');
+            const stepInput = document.getElementById('customStep');
+            
             if (ranges[parameter]) {
-                document.getElementById('customMin').value = ranges[parameter].min;
-                document.getElementById('customMax').value = ranges[parameter].max;
-                document.getElementById('customStep').value = ranges[parameter].step;
+                // Set suggested values
+                minInput.value = ranges[parameter].min;
+                maxInput.value = ranges[parameter].max;
+                stepInput.value = ranges[parameter].step;
+                
+                // Set absolute limits
+                minInput.setAttribute('min', ranges[parameter].absMin);
+                minInput.setAttribute('max', ranges[parameter].absMax);
+                maxInput.setAttribute('min', ranges[parameter].absMin);
+                maxInput.setAttribute('max', ranges[parameter].absMax);
+                stepInput.setAttribute('min', '0.001');
+                stepInput.setAttribute('max', ranges[parameter].absMax - ranges[parameter].absMin);
+                
                 updateRangePreview();
+            } else {
+                // Clear limits for non-numeric parameters
+                minInput.removeAttribute('min');
+                minInput.removeAttribute('max');
+                maxInput.removeAttribute('min');
+                maxInput.removeAttribute('max');
             }
         }
 
