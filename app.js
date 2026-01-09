@@ -60,8 +60,11 @@ document.getElementById('buildingForm').addEventListener('submit', async (e) => 
     const buildingConfig = {};
     
     for (let [key, value] of formData.entries()) {
-        // Skip analysisType and variableParameter, handle them separately
-        if (key === 'analysisType' || key === 'variableParameter') {
+        // Skip analysis-specific parameters, handle them separately
+        if (key === 'analysisType' || key === 'variableParameter' || key === 'rangeType' || 
+            key === 'customMin' || key === 'customMax' || key === 'customStep' ||
+            key === 'costParameter' || key === 'baselineValue' || key === 'improvedValue' ||
+            key === 'electricityRate' || key === 'gasRate' || key === 'analysisYears') {
             continue;
         }
         // Convert numeric strings to numbers
@@ -75,15 +78,90 @@ document.getElementById('buildingForm').addEventListener('submit', async (e) => 
     // Get analysis type
     const analysisType = formData.get('analysisType');
     const variableParameter = formData.get('variableParameter');
+    const rangeType = formData.get('rangeType');
+    const customMin = formData.get('customMin');
+    const customMax = formData.get('customMax');
+    const customStep = formData.get('customStep');
+    
+    // Get cost analysis parameters
+    const costParameter = formData.get('costParameter');
+    let baselineValue = formData.get('baselineValue');
+    let improvedValue = formData.get('improvedValue');
+    
+    // If HVAC system is selected, use the select dropdowns instead of numeric inputs
+    if (costParameter === 'ecm_system_name') {
+        baselineValue = formData.get('baselineValueSelect');
+        improvedValue = formData.get('improvedValueSelect');
+    }
+    
+    const electricityRate = formData.get('electricityRate');
+    const gasRate = formData.get('gasRate');
+    const analysisYears = formData.get('analysisYears');
     
     console.log('Building Configuration:', buildingConfig);
     console.log('Analysis Type:', analysisType);
     console.log('Variable Parameter:', variableParameter);
+    console.log('Range Type:', rangeType);
+    
+    // Validate cost analysis inputs
+    if (analysisType === 'cost') {
+        if (!costParameter) {
+            alert('Please select a parameter to improve for cost analysis.');
+            return;
+        }
+        if (!baselineValue || !improvedValue) {
+            alert('Please enter both baseline and improved values.');
+            return;
+        }
+        if (!electricityRate || !gasRate) {
+            alert('Please enter electricity rate and gas rate.');
+            return;
+        }
+        // Only validate numeric values if not HVAC system
+        if (costParameter !== 'ecm_system_name') {
+            const baseline = parseFloat(baselineValue);
+            const improved = parseFloat(improvedValue);
+            if (isNaN(baseline) || isNaN(improved)) {
+                alert('Please enter valid numeric values for baseline and improved values.');
+                return;
+            }
+        }
+    }
     
     // Validate alternative analysis selection
     if (analysisType === 'alternative' && !variableParameter) {
         alert('Please select a parameter to vary for alternative configuration analysis.');
         return;
+    }
+    
+    // Validate custom range inputs
+    if (analysisType === 'alternative' && rangeType === 'custom') {
+        if (!customMin || !customMax || !customStep) {
+            alert('Please enter minimum, maximum, and step values for custom range.');
+            return;
+        }
+        const min = parseFloat(customMin);
+        const max = parseFloat(customMax);
+        const step = parseFloat(customStep);
+        
+        if (isNaN(min) || isNaN(max) || isNaN(step)) {
+            alert('Please enter valid numeric values for min, max, and step.');
+            return;
+        }
+        if (min >= max) {
+            alert('Minimum value must be less than maximum value.');
+            return;
+        }
+        if (step <= 0) {
+            alert('Step value must be greater than zero.');
+            return;
+        }
+        
+        const numValues = Math.floor((max - min) / step) + 1;
+        if (numValues > 50) {
+            alert(`Your custom range would generate ${numValues} configurations. Please limit to 50 or fewer by adjusting your step size.`);
+            return;
+        }
     }
     
     // Show loading overlay
@@ -99,9 +177,30 @@ document.getElementById('buildingForm').addEventListener('submit', async (e) => 
             // Upload to API
             results = await uploadAndPredict(excelBlob);
             results.analysisType = 'single';
+        } else if (analysisType === 'cost') {
+            // Cost analysis - run two predictions (baseline and improved)
+            // For numeric parameters, parse as float; for string parameters (HVAC), use as-is
+            const baselineVal = costParameter === 'ecm_system_name' ? baselineValue : parseFloat(baselineValue);
+            const improvedVal = costParameter === 'ecm_system_name' ? improvedValue : parseFloat(improvedValue);
+            
+            results = await performCostAnalysis(
+                buildingConfig, 
+                costParameter, 
+                baselineVal, 
+                improvedVal,
+                parseFloat(electricityRate),
+                parseFloat(gasRate),
+                parseInt(analysisYears || 25)
+            );
         } else {
             // Alternative configuration analysis
-            const excelBlob = await generateMultiConfigExcelFile(buildingConfig, variableParameter);
+            const customRange = rangeType === 'custom' ? {
+                min: parseFloat(customMin),
+                max: parseFloat(customMax),
+                step: parseFloat(customStep)
+            } : null;
+            
+            const excelBlob = await generateMultiConfigExcelFile(buildingConfig, variableParameter, customRange);
             
             // Upload to API
             results = await uploadAndPredict(excelBlob);
@@ -181,7 +280,7 @@ async function generateExcelFile(config) {
 }
 
 // Generate Excel file with multiple configurations for alternative analysis
-async function generateMultiConfigExcelFile(config, variableParameter) {
+async function generateMultiConfigExcelFile(config, variableParameter, customRange = null) {
     // Load ALL default values from the first row of the sample Input.xlsx
     let allDefaults;
     try {
@@ -196,34 +295,55 @@ async function generateMultiConfigExcelFile(config, variableParameter) {
     }
     
     console.log('Generating configurations for parameter:', variableParameter);
+    console.log('Custom range:', customRange);
     
-    // Define the variation values for different parameters based on actual form options
-    const parameterVariations = {
-        'ext_wall_cond': [0.183, 0.210, 0.247, 0.278, 0.314],
-        'ext_roof_cond': [0.121, 0.138, 0.142, 0.162, 0.183, 0.193, 0.227],
-        'fixed_window_cond': [1.6, 2.2, 2.4],
-        'fixed_wind_solar_trans': [0.2, 0.3, 0.4, 0.5, 0.6],
-        'fdwr_set': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.69],
-        'srr_set': ['NECB_Default', 0.03, 0.05, 0.08, 0.1],
-        'boiler_eff': [
-            'NECB_Default',
-            'NECB 88% Efficient Condensing Boiler',
-            'Viessmann Vitocrossal 300 CT3-17 96.2% Efficient Condensing Gas Boiler'
-        ],
-        'furnace_eff': [
-            'NECB_Default',
-            'NECB 85% Efficient Condensing Gas Furnace'
-        ],
-        'shw_eff': [
-            'NECB_Default',
-            'Natural Gas Direct Vent with Electric Ignition',
-            'Natural Gas Power Vent with Electric Ignition'
-        ]
-    };
+    let variations;
     
-    const variations = parameterVariations[variableParameter];
-    if (!variations) {
-        throw new Error(`No variations defined for parameter: ${variableParameter}`);
+    if (customRange) {
+        // Generate custom range values
+        variations = [];
+        for (let v = customRange.min; v <= customRange.max + 0.0001; v += customRange.step) {
+            // Round to avoid floating point precision issues
+            variations.push(parseFloat(v.toFixed(6)));
+        }
+        console.log(`Generated ${variations.length} custom values:`, variations);
+    } else {
+        // Use predefined default variations
+        const parameterVariations = {
+            'ecm_system_name': [
+                'NECB_Default',
+                'HS08_CCASHP_VRF',
+                'HS09_CCASHP_Baseboard',
+                'HS11_ASHP_PTHP',
+                'HS12_ASHP_Baseboard',
+                'HS13_ASHP_VRF'
+            ],
+            'ext_wall_cond': [0.183, 0.210, 0.247, 0.278, 0.314],
+            'ext_roof_cond': [0.121, 0.138, 0.142, 0.162, 0.183, 0.193, 0.227],
+            'fixed_window_cond': [1.6, 2.2, 2.4],
+            'fixed_wind_solar_trans': [0.2, 0.3, 0.4, 0.5, 0.6],
+            'fdwr_set': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.69],
+            'srr_set': ['NECB_Default', 0.03, 0.05, 0.08, 0.1],
+            'boiler_eff': [
+                'NECB_Default',
+                'NECB 88% Efficient Condensing Boiler',
+                'Viessmann Vitocrossal 300 CT3-17 96.2% Efficient Condensing Gas Boiler'
+            ],
+            'furnace_eff': [
+                'NECB_Default',
+                'NECB 85% Efficient Condensing Gas Furnace'
+            ],
+            'shw_eff': [
+                'NECB_Default',
+                'Natural Gas Direct Vent with Electric Ignition',
+                'Natural Gas Power Vent with Electric Ignition'
+            ]
+        };
+        
+        variations = parameterVariations[variableParameter];
+        if (!variations) {
+            throw new Error(`No variations defined for parameter: ${variableParameter}`);
+        }
     }
     
     const rows = [];
@@ -276,6 +396,240 @@ async function generateMultiConfigExcelFile(config, variableParameter) {
     });
     
     return blob;
+}
+
+// Perform cost analysis comparing baseline vs improved configuration
+async function performCostAnalysis(config, parameter, baselineValue, improvedValue, electricityRate, gasRate, analysisYears) {
+    console.log('Performing cost analysis:', { parameter, baselineValue, improvedValue, electricityRate, gasRate, analysisYears });
+    
+    try {
+        // Create baseline configuration
+        const baselineConfig = { ...config };
+        baselineConfig[':' + parameter] = baselineValue;
+        
+        // Create improved configuration
+        const improvedConfig = { ...config };
+        improvedConfig[':' + parameter] = improvedValue;
+        
+        console.log('Generating baseline prediction...');
+        // Generate and predict for baseline
+        const baselineExcel = await generateExcelFile(baselineConfig);
+        const baselineResults = await uploadAndPredict(baselineExcel);
+        console.log('Baseline results received:', baselineResults);
+        
+        console.log('Generating improved prediction...');
+        // Generate and predict for improved
+        const improvedExcel = await generateExcelFile(improvedConfig);
+        const improvedResults = await uploadAndPredict(improvedExcel);
+        console.log('Improved results received:', improvedResults);
+        
+        // Check results structure
+        if (!baselineResults.energy_aggregated_results || !baselineResults.costing_results) {
+            console.error('Missing energy or cost data in baseline results:', baselineResults);
+            throw new Error('Baseline results missing required data');
+        }
+        if (!improvedResults.energy_aggregated_results || !improvedResults.costing_results) {
+            console.error('Missing energy or cost data in improved results:', improvedResults);
+            throw new Error('Improved results missing required data');
+        }
+        
+        // Extract energy consumption values (first result)
+        const baselineEnergy = baselineResults.energy_aggregated_results[0];
+        const improvedEnergy = improvedResults.energy_aggregated_results[0];
+        
+        // Extract costing results (per m²)
+        const baselineCost = baselineResults.costing_results[0];
+        const improvedCost = improvedResults.costing_results[0];
+        
+        // Get building area from the results
+        let buildingArea = baselineResults.building_metadata?.floor_area || null;
+        
+        // If floor_area not available in metadata, try to extract from other sources
+        if (!buildingArea) {
+            // Try to get from energy results (some APIs include it there)
+            buildingArea = baselineEnergy.floor_area_m_sq || baselineEnergy['Building Area (m²)'] || null;
+        }
+        
+        // Last resort: use a default based on building type
+        if (!buildingArea) {
+            console.warn('Building area not found in results, using default 1000 m²');
+            buildingArea = 1000;
+        }
+        
+        console.log('Building area:', buildingArea);
+        console.log('Building metadata:', baselineResults.building_metadata);
+        console.log('Baseline cost keys:', Object.keys(baselineCost));
+    
+    // Calculate equipment costs ($/m²)
+    const baselineEnvelopeCost = baselineCost["Predicted cost_equipment_envelope_total_cost_per_m_sq"] || 0;
+    const baselineHvacCost = baselineCost["Predicted cost_equipment_heating_and_cooling_total_cost_per_m_sq"] || 0;
+    const baselineLightingCost = baselineCost["Predicted cost_equipment_lighting_total_cost_per_m_sq"] || 0;
+    const baselineVentilationCost = baselineCost["Predicted cost_equipment_ventilation_total_cost_per_m_sq"] || 0;
+    const baselineShwCost = baselineCost["Predicted cost_equipment_shw_total_cost_per_m_sq"] || 0;
+    const baselineTotalCostPerM2 = baselineEnvelopeCost + baselineHvacCost + baselineLightingCost + baselineVentilationCost + baselineShwCost;
+    
+    const improvedEnvelopeCost = improvedCost["Predicted cost_equipment_envelope_total_cost_per_m_sq"] || 0;
+    const improvedHvacCost = improvedCost["Predicted cost_equipment_heating_and_cooling_total_cost_per_m_sq"] || 0;
+    const improvedLightingCost = improvedCost["Predicted cost_equipment_lighting_total_cost_per_m_sq"] || 0;
+    const improvedVentilationCost = improvedCost["Predicted cost_equipment_ventilation_total_cost_per_m_sq"] || 0;
+    const improvedShwCost = improvedCost["Predicted cost_equipment_shw_total_cost_per_m_sq"] || 0;
+    const improvedTotalCostPerM2 = improvedEnvelopeCost + improvedHvacCost + improvedLightingCost + improvedVentilationCost + improvedShwCost;
+    
+    // Calculate retrofit cost (difference in equipment costs)
+    const retrofitCostPerM2 = improvedTotalCostPerM2 - baselineTotalCostPerM2;
+    
+    // For envelope components (windows, walls, roof), costs are per m² of component, not floor area
+    // Apply correction factor based on parameter type
+    let effectiveArea = buildingArea;
+    let areaNote = '';
+    
+    if (parameter === 'fixed_window_cond') {
+        // Window area = Wall area × FDWR (window-to-wall ratio)
+        // Wall area ≈ 0.4-0.5 × floor area for multi-story buildings
+        const wallToFloorRatio = 0.45; // Typical for mid-rise
+        const fdwr = config[':fdwr_set'] || 0.3; // Get actual FDWR from config, default 0.3
+        const wallArea = buildingArea * wallToFloorRatio;
+        effectiveArea = wallArea * fdwr;
+        areaNote = ` (wall area: ${wallArea.toFixed(0)} m² × FDWR: ${(fdwr * 100).toFixed(0)}%)`;
+    } else if (parameter === 'ext_wall_cond') {
+        // Exterior wall area ≈ 40-50% of floor area for mid-rise buildings
+        effectiveArea = buildingArea * 0.45;
+        areaNote = ' (estimated exterior wall area)';
+    } else if (parameter === 'ext_roof_cond') {
+        // Roof area ≈ floor area / number of floors (for flat roof)
+        // For multi-story, typically 20-30% of total floor area
+        effectiveArea = buildingArea * 0.25;
+        areaNote = ' (estimated roof area)';
+    }
+    
+    const retrofitCost = retrofitCostPerM2 * effectiveArea;
+    
+    console.log('Cost calculation:', {
+        baselineTotalCostPerM2,
+        improvedTotalCostPerM2,
+        retrofitCostPerM2,
+        buildingArea,
+        effectiveArea,
+        areaNote,
+        retrofitCost
+    });
+    
+    console.log('Baseline energy data:', baselineEnergy);
+    console.log('Improved energy data:', improvedEnergy);
+    console.log('Available energy fields:', Object.keys(baselineEnergy));
+    
+    // Calculate energy savings (per m²)
+    const electricitySavings = baselineEnergy["Predicted Electricity Energy Total (Gigajoules per square meter)"] - 
+                               improvedEnergy["Predicted Electricity Energy Total (Gigajoules per square meter)"];
+    const gasSavings = baselineEnergy["Predicted Gas Energy Total (Gigajoules per square meter)"] - 
+                      improvedEnergy["Predicted Gas Energy Total (Gigajoules per square meter)"];
+    
+    console.log('Energy savings (GJ/m²):', {
+        electricitySavings,
+        gasSavings,
+        baselineElectricity: baselineEnergy["Predicted Electricity Energy Total (Gigajoules per square meter)"],
+        improvedElectricity: improvedEnergy["Predicted Electricity Energy Total (Gigajoules per square meter)"],
+        baselineGas: baselineEnergy["Predicted Gas Energy Total (Gigajoules per square meter)"],
+        improvedGas: improvedEnergy["Predicted Gas Energy Total (Gigajoules per square meter)"]
+    });
+    
+    // Convert to kWh and m³ for the building
+    // 1 GJ = 277.778 kWh
+    const electricitySavingsKwhPerM2 = electricitySavings * 277.778;
+    // 1 GJ ≈ 26.8 m³ of natural gas
+    const gasSavingsM3PerM2 = gasSavings * 26.8;
+    
+    // Calculate total annual energy savings for the whole building
+    const totalElectricitySavingsKwh = electricitySavingsKwhPerM2 * buildingArea;
+    const totalGasSavingsM3 = gasSavingsM3PerM2 * buildingArea;
+    
+    console.log('Total building energy savings:', {
+        totalElectricitySavingsKwh,
+        totalGasSavingsM3,
+        buildingArea
+    });
+    
+    // Calculate annual cost savings
+    const annualElectricitySavings = totalElectricitySavingsKwh * electricityRate;
+    const annualGasSavings = totalGasSavingsM3 * gasRate;
+    const totalAnnualSavings = annualElectricitySavings + annualGasSavings;
+    
+    console.log('Annual cost savings:', {
+        annualElectricitySavings,
+        annualGasSavings,
+        totalAnnualSavings,
+        electricityRate,
+        gasRate
+    });
+    
+    // Calculate ROI metrics
+    const simplePaybackYears = retrofitCost > 0 && totalAnnualSavings > 0 ? retrofitCost / totalAnnualSavings : 0;
+    const totalSavingsOverPeriod = totalAnnualSavings * analysisYears;
+    const netSavings = totalSavingsOverPeriod - retrofitCost;
+    const roi = retrofitCost > 0 ? (netSavings / retrofitCost) * 100 : 0;
+    
+    console.log('ROI metrics:', {
+        retrofitCost,
+        simplePaybackYears,
+        totalSavingsOverPeriod,
+        netSavings,
+        roi
+    });
+    
+    // Calculate percentage reductions
+    const baselineElectricityGJ = baselineEnergy["Predicted Electricity Energy Total (Gigajoules per square meter)"];
+    const baselineGasGJ = baselineEnergy["Predicted Gas Energy Total (Gigajoules per square meter)"];
+    const electricityReduction = baselineElectricityGJ > 0 ? (electricitySavings / baselineElectricityGJ) * 100 : 0;
+    const gasReduction = baselineGasGJ > 0 ? (gasSavings / baselineGasGJ) * 100 : 0;
+    
+    // Return comprehensive results
+    return {
+        analysisType: 'cost',
+        parameter: parameter,
+        baselineValue: baselineValue,
+        improvedValue: improvedValue,
+        baselineResults: {
+            total_energy_eui_electricity_kwh_per_m_sq: baselineElectricityGJ * 277.778,
+            total_energy_eui_natural_gas_gj_per_m_sq: baselineGasGJ,
+            total_cost_per_m_sq: baselineTotalCostPerM2
+        },
+        improvedResults: {
+            total_energy_eui_electricity_kwh_per_m_sq: improvedEnergy["Predicted Electricity Energy Total (Gigajoules per square meter)"] * 277.778,
+            total_energy_eui_natural_gas_gj_per_m_sq: improvedEnergy["Predicted Gas Energy Total (Gigajoules per square meter)"],
+            total_cost_per_m_sq: improvedTotalCostPerM2
+        },
+        economics: {
+            retrofitCost: retrofitCost,
+            retrofitCostPerM2: retrofitCostPerM2,
+            effectiveArea: effectiveArea,
+            areaNote: areaNote,
+            baselineTotalCost: baselineTotalCostPerM2 * buildingArea,
+            improvedTotalCost: improvedTotalCostPerM2 * buildingArea,
+            electricityRate: electricityRate,
+            gasRate: gasRate,
+            analysisYears: analysisYears,
+            buildingArea: buildingArea,
+            annualElectricitySavings: annualElectricitySavings,
+            annualGasSavings: annualGasSavings,
+            totalAnnualSavings: totalAnnualSavings,
+            simplePaybackYears: simplePaybackYears,
+            totalSavingsOverPeriod: totalSavingsOverPeriod,
+            netSavings: netSavings,
+            roi: roi
+        },
+        energySavings: {
+            electricitySavings: electricitySavingsKwhPerM2,
+            electricitySavingsPercent: electricityReduction,
+            gasSavings: gasSavings,
+            gasSavingsPercent: gasReduction,
+            totalElectricitySavingsKwh: totalElectricitySavingsKwh,
+            totalGasSavingsM3: totalGasSavingsM3
+        }
+    };
+    } catch (error) {
+        console.error('Error in performCostAnalysis:', error);
+        throw error;
+    }
 }
 
 // Upload file and get prediction
@@ -420,6 +774,12 @@ function displayResults(results) {
     
     console.log('Displaying results:', results);
     
+    // Check if this is a cost analysis
+    if (results.analysisType === 'cost') {
+        displayCostAnalysisResults(results);
+        return;
+    }
+    
     // Check if this is an alternative configuration analysis
     if (results.analysisType === 'alternative') {
         displayAlternativeResults(results);
@@ -530,6 +890,179 @@ function displayResults(results) {
     
     // Smooth scroll to results
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Display cost analysis results with ROI calculations
+function displayCostAnalysisResults(results) {
+    const resultsSection = document.getElementById('results');
+    const resultsContent = document.getElementById('resultsContent');
+    
+    console.log('Displaying cost analysis results');
+    
+    const { economics, energySavings, parameter, baselineValue, improvedValue, baselineResults, improvedResults } = results;
+    
+    // Get parameter display name
+    const parameterNames = {
+        'ecm_system_name': 'Dominant HVAC System',
+        'ext_wall_cond': 'External Wall Thermal Conductance',
+        'ext_roof_cond': 'External Roof Thermal Conductance',
+        'fixed_window_cond': 'Window Thermal Conductance',
+        'fixed_wind_solar_trans': 'Window Solar Heat Gain Coefficient',
+        'fdwr_set': 'Window-to-Wall Ratio',
+        'srr_set': 'Skylight-to-Roof Ratio'
+    };
+    
+    const parameterDisplayName = parameterNames[parameter] || parameter;
+    
+    // Determine if this is a good investment
+    const isGoodInvestment = economics.simplePaybackYears <= economics.analysisYears && economics.roi > 0;
+    const statusEmoji = isGoodInvestment ? '✅' : '⚠️';
+    const statusText = isGoodInvestment ? 'Financially Viable' : 'Review Carefully';
+    
+    let htmlContent = `
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+            <h3 style="margin: 0 0 10px 0;">💰 Cost-Benefit Analysis: ${parameterDisplayName}</h3>
+            <p style="margin: 0; opacity: 0.9;">Comparing baseline vs improved configuration</p>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background-color: #f8f9ff; border-radius: 8px; border-left: 4px solid ${isGoodInvestment ? '#48bb78' : '#f6ad55'};">
+            <div>
+                <h4 style="margin: 0 0 5px 0;">${statusEmoji} Investment Status: ${statusText}</h4>
+                <p style="margin: 0; font-size: 14px; color: #666;">Based on ${economics.analysisYears}-year analysis period</p>
+            </div>
+            <button onclick="downloadCostAnalysisPDFReport()" class="btn btn-primary" style="padding: 10px 20px;">
+                📄 Download PDF Report
+            </button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            <div class="result-card" style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); border: 2px solid #667eea;">
+                <h4>💵 Simple Payback Period</h4>
+                <div class="value" style="font-size: 2.5em; color: #667eea;">${economics.simplePaybackYears.toFixed(1)}</div>
+                <div class="unit">years</div>
+                <p class="subtext">Time to recover investment</p>
+            </div>
+            
+            <div class="result-card" style="background: linear-gradient(135deg, #48bb7820 0%, #38a16920 100%); border: 2px solid #48bb78;">
+                <h4>📈 Return on Investment (ROI)</h4>
+                <div class="value" style="font-size: 2.5em; color: #48bb78;">${economics.roi.toFixed(1)}%</div>
+                <div class="unit">over ${economics.analysisYears} years</div>
+                <p class="subtext">Total return on investment</p>
+            </div>
+            
+            <div class="result-card" style="background: linear-gradient(135deg, #f6ad5520 0%, #ec845220 100%); border: 2px solid #f6ad55;">
+                <h4>💰 Annual Cost Savings</h4>
+                <div class="value" style="font-size: 2.5em; color: #f6ad55;">$${economics.totalAnnualSavings.toFixed(0)}</div>
+                <div class="unit">per year</div>
+                <p class="subtext">Electricity: $${economics.annualElectricitySavings.toFixed(0)}<br>Gas: $${economics.annualGasSavings.toFixed(0)}</p>
+            </div>
+        </div>
+        
+        <h3 style="margin-top: 30px; color: #2a5298;">💸 Financial Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px;">
+            <div class="result-card">
+                <h4>🔨 Retrofit Investment</h4>
+                <div class="value">$${economics.retrofitCost.toLocaleString()}</div>
+                <div class="unit">total cost</div>
+                <p class="subtext">$${economics.retrofitCostPerM2.toFixed(2)}/m²</p>
+            </div>
+            
+            <div class="result-card">
+                <h4>💵 Total Savings (${economics.analysisYears}yr)</h4>
+                <div class="value">$${economics.totalSavingsOverPeriod.toLocaleString()}</div>
+                <div class="unit">cumulative</div>
+            </div>
+            
+            <div class="result-card">
+                <h4>📊 Net Benefit</h4>
+                <div class="value" style="color: ${economics.netSavings >= 0 ? '#48bb78' : '#f56565'};">$${economics.netSavings.toLocaleString()}</div>
+                <div class="unit">after investment</div>
+            </div>
+        </div>
+        
+        <div style="background-color: #f0f7ff; padding: 15px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #667eea;">
+            <h4 style="margin-top: 0; color: #2a5298;">💡 Cost Calculation Details</h4>
+            <p style="margin: 5px 0; font-size: 14px;">
+                <strong>Baseline Total Equipment Cost:</strong> $${economics.baselineTotalCost.toLocaleString()} 
+                (${baselineResults.total_cost_per_m_sq.toFixed(2)}/m²)
+            </p>
+            <p style="margin: 5px 0; font-size: 14px;">
+                <strong>Improved Total Equipment Cost:</strong> $${economics.improvedTotalCost.toLocaleString()} 
+                (${improvedResults.total_cost_per_m_sq.toFixed(2)}/m²)
+            </p>
+            <p style="margin: 5px 0; font-size: 14px;">
+                <strong>Retrofit Cost (Difference):</strong> $${economics.retrofitCost.toLocaleString()} 
+                (${economics.retrofitCostPerM2.toFixed(2)}/m² × ${economics.effectiveArea.toFixed(0)} m²${economics.areaNote})
+            </p>
+            <p style="margin: 10px 0 0 0; font-size: 13px; color: #666;">
+                Note: ${economics.areaNote ? 'Envelope component costs are per m² of component area, not floor area. Areas are estimated based on typical building geometry.' : 'Retrofit cost is calculated from the equipment cost predictions provided by the surrogate model.'}
+            </p>
+        </div>
+        
+        <h3 style="margin-top: 30px; color: #2a5298;">⚡ Energy Performance Comparison</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 30px;">
+            <div class="result-card" style="text-align: center;">
+                <h4>📉 Baseline</h4>
+                <div style="font-size: 1.1em; color: #666; margin: 10px 0;">
+                    <strong>${parameterDisplayName}:</strong> ${baselineValue}
+                </div>
+                <div class="value" style="font-size: 1.5em;">${baselineResults.total_energy_eui_electricity_kwh_per_m_sq.toFixed(2)}</div>
+                <div class="unit">kWh/m² (Electricity)</div>
+                <div class="value" style="font-size: 1.5em; margin-top: 10px;">${baselineResults.total_energy_eui_natural_gas_gj_per_m_sq.toFixed(4)}</div>
+                <div class="unit">GJ/m² (Gas)</div>
+            </div>
+            
+            <div class="result-card" style="text-align: center; background: linear-gradient(135deg, #48bb7820 0%, #38a16920 100%);">
+                <h4>✨ After Retrofit</h4>
+                <div style="font-size: 1.1em; color: #666; margin: 10px 0;">
+                    <strong>${parameterDisplayName}:</strong> ${improvedValue}
+                </div>
+                <div class="value" style="font-size: 1.5em; color: #48bb78;">${improvedResults.total_energy_eui_electricity_kwh_per_m_sq.toFixed(2)}</div>
+                <div class="unit">kWh/m² (Electricity)</div>
+                <div class="value" style="font-size: 1.5em; margin-top: 10px; color: #48bb78;">${improvedResults.total_energy_eui_natural_gas_gj_per_m_sq.toFixed(4)}</div>
+                <div class="unit">GJ/m² (Gas)</div>
+            </div>
+            
+            <div class="result-card" style="text-align: center; background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);">
+                <h4>📊 Savings</h4>
+                <div style="font-size: 1.1em; color: #666; margin: 10px 0;">
+                    <strong>Reduction</strong>
+                </div>
+                <div class="value" style="font-size: 1.5em; color: #667eea;">${energySavings.electricitySavingsPercent.toFixed(1)}%</div>
+                <div class="unit">${energySavings.electricitySavings.toFixed(2)} kWh/m²</div>
+                <div class="value" style="font-size: 1.5em; margin-top: 10px; color: #667eea;">${energySavings.gasSavingsPercent.toFixed(1)}%</div>
+                <div class="unit">${energySavings.gasSavings.toFixed(4)} GJ/m²</div>
+            </div>
+        </div>
+        
+        <h3 style="margin-top: 30px; color: #2a5298;">📋 Economic Assumptions</h3>
+        <div style="background-color: #f8f9ff; padding: 20px; border-radius: 8px; border: 1px solid #667eea;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div>
+                    <strong>⚡ Electricity Rate:</strong><br>
+                    $${economics.electricityRate.toFixed(3)}/kWh
+                </div>
+                <div>
+                    <strong>🔥 Natural Gas Rate:</strong><br>
+                    $${economics.gasRate.toFixed(3)}/m³
+                </div>
+                <div>
+                    <strong>🏢 Building Area:</strong><br>
+                    ${economics.buildingArea.toFixed(0)} m²
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+            <strong>💡 Note:</strong> This is a simplified economic analysis. Actual results may vary based on building operation, maintenance costs, utility rate changes, and other factors. Consider consulting with an energy professional for detailed analysis.
+        </div>
+    `;
+    
+    resultsContent.innerHTML = htmlContent;
+    resultsSection.style.display = 'block';
+    
+    // Store results globally for PDF generation
+    window.currentCostAnalysisResults = results;
 }
 
 // Display alternative configuration results
@@ -1028,6 +1561,105 @@ function storeSinglePredictionForPDF(results) {
     globalSinglePrediction.totalCost = globalSinglePrediction.envelopeCost + globalSinglePrediction.hvacCost + 
                                        globalSinglePrediction.lightingCost + globalSinglePrediction.ventilationCost + 
                                        globalSinglePrediction.shwCost;
+}
+
+// Download PDF Report for Cost Analysis
+async function downloadCostAnalysisPDFReport() {
+    if (!window.currentCostAnalysisResults) {
+        alert('No cost analysis data available to generate report');
+        return;
+    }
+    
+    const results = window.currentCostAnalysisResults;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPos = 20;
+    
+    // Add logo and letterhead
+    doc.setFillColor(102, 126, 234);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CANBUILDAI', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Cost-Benefit Analysis Report', pageWidth / 2, 30, { align: 'center' });
+    
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+    yPos = 55;
+    
+    // Parameter info
+    const parameterNames = {
+        'ext_wall_cond': 'External Wall Thermal Conductance',
+        'ext_roof_cond': 'External Roof Thermal Conductance',
+        'fixed_window_cond': 'Window Thermal Conductance',
+        'fixed_wind_solar_trans': 'Window Solar Heat Gain Coefficient',
+        'fdwr_set': 'Window-to-Wall Ratio',
+        'srr_set': 'Skylight-to-Roof Ratio'
+    };
+    
+    const paramName = parameterNames[results.parameter] || results.parameter;
+    
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Parameter: ${paramName}`, 15, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Baseline Value: ${results.baselineValue}`, 15, yPos);
+    yPos += 6;
+    doc.text(`Improved Value: ${results.improvedValue}`, 15, yPos);
+    yPos += 12;
+    
+    // Key Metrics
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Financial Analysis', 15, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const econ = results.economics;
+    doc.text(`Simple Payback Period: ${econ.simplePaybackYears.toFixed(1)} years`, 15, yPos);
+    yPos += 6;
+    doc.text(`Return on Investment: ${econ.roi.toFixed(1)}% over ${econ.analysisYears} years`, 15, yPos);
+    yPos += 6;
+    doc.text(`Annual Cost Savings: $${econ.totalAnnualSavings.toFixed(0)}`, 15, yPos);
+    yPos += 6;
+    doc.text(`Retrofit Cost: $${econ.retrofitCost.toLocaleString()}`, 15, yPos);
+    yPos += 6;
+    doc.text(`Net Benefit (${econ.analysisYears}yr): $${econ.netSavings.toLocaleString()}`, 15, yPos);
+    yPos += 12;
+    
+    // Energy Savings
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Energy Savings', 15, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const energy = results.energySavings;
+    doc.text(`Electricity Reduction: ${energy.electricitySavingsPercent.toFixed(1)}% (${energy.electricitySavings.toFixed(2)} kWh/m²)`, 15, yPos);
+    yPos += 6;
+    doc.text(`Natural Gas Reduction: ${energy.gasSavingsPercent.toFixed(1)}% (${energy.gasSavings.toFixed(4)} GJ/m²)`, 15, yPos);
+    yPos += 12;
+    
+    // Footer
+    doc.setFontSize(9);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 15, pageHeight - 15);
+    doc.text('CANBUILDAI - Energy Surrogate Model', pageWidth / 2, pageHeight - 15, { align: 'center' });
+    
+    // Save
+    doc.save('cost_analysis_report.pdf');
 }
 
 // Download PDF Report for Single Prediction

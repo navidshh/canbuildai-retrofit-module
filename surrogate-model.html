@@ -329,9 +329,9 @@
                     <div class="form-group">
                         <label>
                             Select Analysis Type
-                            <span class="tooltip" data-tooltip="Choose between single building prediction or alternative configuration analysis">ℹ️</span>
+                            <span class="tooltip" data-tooltip="Choose between single building prediction, alternative configuration analysis, or cost analysis">ℹ️</span>
                         </label>
-                        <div style="display: flex; gap: 20px; margin-top: 10px;">
+                        <div style="display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap;">
                             <label style="display: flex; align-items: center; cursor: pointer;">
                                 <input type="radio" name="analysisType" value="single" checked style="margin-right: 8px;">
                                 <span>Single Building Prediction</span>
@@ -339,6 +339,10 @@
                             <label style="display: flex; align-items: center; cursor: pointer;">
                                 <input type="radio" name="analysisType" value="alternative" style="margin-right: 8px;">
                                 <span>Alternative Configuration Analysis</span>
+                            </label>
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="analysisType" value="cost" style="margin-right: 8px;">
+                                <span>💰 Cost Analysis & ROI</span>
                             </label>
                         </div>
                     </div>
@@ -350,6 +354,7 @@
                         </label>
                         <select id="variableParameter" name="variableParameter">
                             <option value="">Select parameter...</option>
+                            <option value="ecm_system_name">Dominant HVAC System</option>
                             <option value="ext_wall_cond">External Wall Thermal Conductance (W/m²·K)</option>
                             <option value="ext_roof_cond">External Roof Thermal Conductance (W/m²·K)</option>
                             <option value="fixed_window_cond">Window Thermal Conductance (W/m²·K)</option>
@@ -360,6 +365,136 @@
                             <option value="furnace_eff">Furnace Efficiency</option>
                             <option value="shw_eff">Service Hot Water Efficiency</option>
                         </select>
+                    </div>
+
+                    <div id="rangeTypeSelection" class="form-group" style="display: none; margin-top: 20px;">
+                        <label>
+                            Value Range Selection
+                            <span class="tooltip" data-tooltip="Choose to use predefined default values or define a custom range">ℹ️</span>
+                        </label>
+                        <div style="display: flex; gap: 20px; margin-top: 10px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="rangeType" value="default" checked style="margin-right: 8px;">
+                                <span>Use Default Values</span>
+                            </label>
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="rangeType" value="custom" style="margin-right: 8px;">
+                                <span>Define Custom Range</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="customRangeInputs" class="form-group" style="display: none; margin-top: 20px; background-color: #f8f9ff; padding: 20px; border-radius: 8px; border: 1px solid #667eea;">
+                        <h4 style="margin-top: 0; color: #2a5298;">Custom Range Configuration</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <div>
+                                <label for="customMin">Minimum Value</label>
+                                <input type="number" id="customMin" name="customMin" step="any" placeholder="Min" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label for="customMax">Maximum Value</label>
+                                <input type="number" id="customMax" name="customMax" step="any" placeholder="Max" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label for="customStep">Step Size</label>
+                                <input type="number" id="customStep" name="customStep" step="any" placeholder="Step" style="width: 100%;">
+                            </div>
+                        </div>
+                        <div id="rangePreview" style="margin-top: 15px; padding: 10px; background-color: white; border-radius: 5px; font-size: 14px;">
+                            <strong>Preview:</strong> <span id="rangePreviewText">Configure range to see preview</span>
+                        </div>
+                    </div>
+
+                    <!-- Cost Analysis Section -->
+                    <div id="costAnalysisSection" class="form-group" style="display: none; margin-top: 20px;">
+                        <h3 style="color: #2a5298; margin-bottom: 15px;">💰 Cost Analysis Configuration</h3>
+                        
+                        <div class="form-group">
+                            <label for="costParameter">
+                                Select Parameter to Improve
+                                <span class="tooltip" data-tooltip="Choose which parameter you're considering upgrading">ℹ️</span>
+                            </label>
+                            <select id="costParameter" name="costParameter">
+                                <option value="">Select parameter...</option>
+                                <option value="ecm_system_name">Dominant HVAC System</option>
+                                <option value="ext_wall_cond">External Wall Thermal Conductance (W/m²·K)</option>
+                                <option value="ext_roof_cond">External Roof Thermal Conductance (W/m²·K)</option>
+                                <option value="fixed_window_cond">Window Thermal Conductance (W/m²·K)</option>
+                                <option value="fixed_wind_solar_trans">Window Solar Heat Gain Coefficient</option>
+                                <option value="fdwr_set">Window-to-Wall Ratio (%)</option>
+                                <option value="srr_set">Skylight-to-Roof Ratio (%)</option>
+                            </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                            <div class="form-group">
+                                <label for="baselineValue">
+                                    Current/Baseline Value
+                                    <span class="tooltip" data-tooltip="The current parameter value before retrofit">ℹ️</span>
+                                </label>
+                                <input type="number" id="baselineValue" name="baselineValue" step="any" placeholder="e.g., 2.4" style="display: block;">
+                                <select id="baselineValueSelect" name="baselineValueSelect" style="display: none;">
+                                    <option value="">Select current system...</option>
+                                    <option value="NECB_Default">NECB Default</option>
+                                    <option value="HS08_CCASHP_VRF">HS08 - Cold Climate ASHP VRF</option>
+                                    <option value="HS09_CCASHP_Baseboard">HS09 - Cold Climate ASHP Baseboard</option>
+                                    <option value="HS11_ASHP_PTHP">HS11 - ASHP Packaged Terminal</option>
+                                    <option value="HS12_ASHP_Baseboard">HS12 - ASHP Baseboard</option>
+                                    <option value="HS13_ASHP_VRF">HS13 - ASHP VRF</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="improvedValue">
+                                    Improved/Retrofit Value
+                                    <span class="tooltip" data-tooltip="The parameter value after retrofit">ℹ️</span>
+                                </label>
+                                <input type="number" id="improvedValue" name="improvedValue" step="any" placeholder="e.g., 1.6" style="display: block;">
+                                <select id="improvedValueSelect" name="improvedValueSelect" style="display: none;">
+                                    <option value="">Select improved system...</option>
+                                    <option value="NECB_Default">NECB Default</option>
+                                    <option value="HS08_CCASHP_VRF">HS08 - Cold Climate ASHP VRF</option>
+                                    <option value="HS09_CCASHP_Baseboard">HS09 - Cold Climate ASHP Baseboard</option>
+                                    <option value="HS11_ASHP_PTHP">HS11 - ASHP Packaged Terminal</option>
+                                    <option value="HS12_ASHP_Baseboard">HS12 - ASHP Baseboard</option>
+                                    <option value="HS13_ASHP_VRF">HS13 - ASHP VRF</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="background-color: #f8f9ff; padding: 20px; border-radius: 8px; margin-top: 15px; border: 1px solid #667eea;">
+                            <h4 style="margin-top: 0; color: #2a5298;">Economic Parameters</h4>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div class="form-group">
+                                    <label for="electricityRate">
+                                        Electricity Rate ($/kWh)
+                                        <span class="tooltip" data-tooltip="Your electricity utility rate">ℹ️</span>
+                                    </label>
+                                    <input type="number" id="electricityRate" name="electricityRate" step="0.001" placeholder="e.g., 0.13" value="0.13">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gasRate">
+                                        Natural Gas Rate ($/m³)
+                                        <span class="tooltip" data-tooltip="Your natural gas utility rate">ℹ️</span>
+                                    </label>
+                                    <input type="number" id="gasRate" name="gasRate" step="0.001" placeholder="e.g., 0.25" value="0.25">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label for="analysisYears">
+                                    Analysis Period (years)
+                                    <span class="tooltip" data-tooltip="Number of years to project savings">ℹ️</span>
+                                </label>
+                                <input type="number" id="analysisYears" name="analysisYears" step="1" min="1" max="50" placeholder="e.g., 25" value="25">
+                            </div>
+                            
+                            <div style="margin-top: 15px; padding: 12px; background-color: #e6f7ff; border-radius: 5px; border-left: 3px solid #1890ff;">
+                                <p style="margin: 0; font-size: 14px; color: #555;">
+                                    💡 <strong>Note:</strong> The retrofit cost will be automatically calculated based on the equipment cost difference between baseline and improved configurations.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -398,18 +533,149 @@
         document.querySelectorAll('input[name="analysisType"]').forEach(radio => {
             radio.addEventListener('change', function() {
                 const parameterSelection = document.getElementById('parameterSelection');
+                const rangeTypeSelection = document.getElementById('rangeTypeSelection');
+                const costAnalysisSection = document.getElementById('costAnalysisSection');
+                
                 if (this.value === 'alternative') {
                     parameterSelection.style.display = 'block';
+                    costAnalysisSection.style.display = 'none';
+                } else if (this.value === 'cost') {
+                    parameterSelection.style.display = 'none';
+                    rangeTypeSelection.style.display = 'none';
+                    document.getElementById('customRangeInputs').style.display = 'none';
+                    costAnalysisSection.style.display = 'block';
                 } else {
                     parameterSelection.style.display = 'none';
+                    rangeTypeSelection.style.display = 'none';
+                    document.getElementById('customRangeInputs').style.display = 'none';
+                    costAnalysisSection.style.display = 'none';
                 }
             });
+        });
+
+        // Handle parameter selection change
+        document.getElementById('variableParameter').addEventListener('change', function() {
+            const rangeTypeSelection = document.getElementById('rangeTypeSelection');
+            const customRangeInputs = document.getElementById('customRangeInputs');
+            
+            if (this.value) {
+                rangeTypeSelection.style.display = 'block';
+                // Reset to default when parameter changes
+                document.querySelector('input[name="rangeType"][value="default"]').checked = true;
+                customRangeInputs.style.display = 'none';
+                
+                // Set suggested ranges when parameter is selected
+                updateSuggestedRanges(this.value);
+            } else {
+                rangeTypeSelection.style.display = 'none';
+                customRangeInputs.style.display = 'none';
+            }
+        });
+
+        // Handle range type radio button change
+        document.querySelectorAll('input[name="rangeType"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const customRangeInputs = document.getElementById('customRangeInputs');
+                if (this.value === 'custom') {
+                    customRangeInputs.style.display = 'block';
+                    updateRangePreview();
+                } else {
+                    customRangeInputs.style.display = 'none';
+                }
+            });
+        });
+
+        // Update suggested ranges based on parameter
+        function updateSuggestedRanges(parameter) {
+            const ranges = {
+                'ext_wall_cond': { min: 0.15, max: 0.35, step: 0.05 },
+                'ext_roof_cond': { min: 0.10, max: 0.25, step: 0.03 },
+                'fixed_window_cond': { min: 1.5, max: 4.0, step: 0.5 },
+                'fixed_wind_solar_trans': { min: 0.2, max: 0.7, step: 0.1 },
+                'fdwr_set': { min: 0.1, max: 0.7, step: 0.1 },
+                'srr_set': { min: 0.03, max: 0.15, step: 0.02 }
+            };
+            
+            if (ranges[parameter]) {
+                document.getElementById('customMin').value = ranges[parameter].min;
+                document.getElementById('customMax').value = ranges[parameter].max;
+                document.getElementById('customStep').value = ranges[parameter].step;
+                updateRangePreview();
+            }
+        }
+
+        // Update range preview
+        function updateRangePreview() {
+            const min = parseFloat(document.getElementById('customMin').value);
+            const max = parseFloat(document.getElementById('customMax').value);
+            const step = parseFloat(document.getElementById('customStep').value);
+            
+            if (isNaN(min) || isNaN(max) || isNaN(step) || step <= 0) {
+                document.getElementById('rangePreviewText').textContent = 'Please enter valid min, max, and step values';
+                return;
+            }
+            
+            if (min >= max) {
+                document.getElementById('rangePreviewText').textContent = 'Minimum must be less than maximum';
+                return;
+            }
+            
+            const values = [];
+            for (let v = min; v <= max; v += step) {
+                values.push(v.toFixed(3));
+                if (values.length > 20) {
+                    values.push('...');
+                    break;
+                }
+            }
+            
+            const numValues = Math.floor((max - min) / step) + 1;
+            document.getElementById('rangePreviewText').textContent = 
+                `${numValues} values: ${values.join(', ')}`;
+        }
+
+        // Add event listeners for range inputs
+        ['customMin', 'customMax', 'customStep'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateRangePreview);
+        });
+
+        // Handle cost parameter selection change (toggle between numeric and dropdown inputs)
+        document.getElementById('costParameter').addEventListener('change', function() {
+            const baselineValueInput = document.getElementById('baselineValue');
+            const improvedValueInput = document.getElementById('improvedValue');
+            const baselineValueSelect = document.getElementById('baselineValueSelect');
+            const improvedValueSelect = document.getElementById('improvedValueSelect');
+            
+            if (this.value === 'ecm_system_name') {
+                // Show dropdowns, hide numeric inputs
+                baselineValueInput.style.display = 'none';
+                improvedValueInput.style.display = 'none';
+                baselineValueSelect.style.display = 'block';
+                improvedValueSelect.style.display = 'block';
+                
+                // Clear numeric values
+                baselineValueInput.value = '';
+                improvedValueInput.value = '';
+            } else {
+                // Show numeric inputs, hide dropdowns
+                baselineValueInput.style.display = 'block';
+                improvedValueInput.style.display = 'block';
+                baselineValueSelect.style.display = 'none';
+                improvedValueSelect.style.display = 'none';
+                
+                // Clear dropdown values
+                baselineValueSelect.value = '';
+                improvedValueSelect.value = '';
+            }
         });
 
         // Handle form reset
         document.getElementById('buildingForm').addEventListener('reset', function() {
             setTimeout(() => {
                 document.getElementById('parameterSelection').style.display = 'none';
+                document.getElementById('rangeTypeSelection').style.display = 'none';
+                document.getElementById('customRangeInputs').style.display = 'none';
+                document.getElementById('costAnalysisSection').style.display = 'none';
             }, 0);
         });
         
