@@ -681,10 +681,10 @@ async function uploadAndPredict(fileBlob) {
     console.log('Upload result:', uploadResult);
     
     // Run model with the uploaded file
-    // The config_file parameter should be the YAML config file path
+    // The backend will auto-select the appropriate config based on building type and location
     const predictFormData = new FormData();
     predictFormData.append('email', uniqueEmail);
-    predictFormData.append('config_file', 'input_config.yml');
+    // No need to send config_file - backend auto-selects based on building data
     
     const predictResponse = await fetch(`${API_BASE_URL}/run-model-s3`, {
         method: 'POST',
