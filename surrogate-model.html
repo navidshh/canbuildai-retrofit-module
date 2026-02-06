@@ -110,7 +110,15 @@
                             <option value="0.247">0.247</option>
                             <option value="0.278">0.278</option>
                             <option value="0.314">0.314 (Least Insulation)</option>
+                            <option value="custom">🔧 Enter your own value</option>
                         </select>
+                        <div id="ext_wall_cond_custom" class="custom-input-group" style="display: none; margin-top: 10px;">
+                            <input type="number" id="ext_wall_cond_custom_value" step="0.001" placeholder="Enter value" style="width: 100%; padding: 8px; border: 1px solid #667eea; border-radius: 4px;">
+                            <div class="warning-message" style="display: flex; align-items: center; margin-top: 8px; padding: 8px; background-color: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                                <span style="margin-right: 5px;">⚠️</span>
+                                <small style="color: #856404;">Values outside 0.183-0.314 may cause inaccuracies in the backend model</small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -127,7 +135,15 @@
                             <option value="0.183">0.183</option>
                             <option value="0.193">0.193</option>
                             <option value="0.227">0.227 (Least Insulation)</option>
+                            <option value="custom">🔧 Enter your own value</option>
                         </select>
+                        <div id="ext_roof_cond_custom" class="custom-input-group" style="display: none; margin-top: 10px;">
+                            <input type="number" id="ext_roof_cond_custom_value" step="0.001" placeholder="Enter value" style="width: 100%; padding: 8px; border: 1px solid #667eea; border-radius: 4px;">
+                            <div class="warning-message" style="display: flex; align-items: center; margin-top: 8px; padding: 8px; background-color: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                                <span style="margin-right: 5px;">⚠️</span>
+                                <small style="color: #856404;">Values outside 0.121-0.227 may cause inaccuracies in the backend model</small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -140,7 +156,15 @@
                             <option value="1.6">1.6 (Triple Glazed, Best)</option>
                             <option value="2.2">2.2 (Double Glazed, Good)</option>
                             <option value="2.4">2.4 (Double Glazed, Standard)</option>
+                            <option value="custom">🔧 Enter your own value</option>
                         </select>
+                        <div id="fixed_window_cond_custom" class="custom-input-group" style="display: none; margin-top: 10px;">
+                            <input type="number" id="fixed_window_cond_custom_value" step="0.01" placeholder="Enter value" style="width: 100%; padding: 8px; border: 1px solid #667eea; border-radius: 4px;">
+                            <div class="warning-message" style="display: flex; align-items: center; margin-top: 8px; padding: 8px; background-color: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                                <span style="margin-right: 5px;">⚠️</span>
+                                <small style="color: #856404;">Values outside 1.6-2.4 may cause inaccuracies in the backend model</small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -155,7 +179,15 @@
                             <option value="0.4">0.4 (Moderate)</option>
                             <option value="0.5">0.5</option>
                             <option value="0.6">0.6 (High Solar Gain)</option>
+                            <option value="custom">🔧 Enter your own value</option>
                         </select>
+                        <div id="fixed_wind_solar_trans_custom" class="custom-input-group" style="display: none; margin-top: 10px;">
+                            <input type="number" id="fixed_wind_solar_trans_custom_value" step="0.01" placeholder="Enter value" style="width: 100%; padding: 8px; border: 1px solid #667eea; border-radius: 4px;">
+                            <div class="warning-message" style="display: flex; align-items: center; margin-top: 8px; padding: 8px; background-color: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                                <span style="margin-right: 5px;">⚠️</span>
+                                <small style="color: #856404;">Values outside 0.2-0.6 may cause inaccuracies in the backend model</small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -172,7 +204,15 @@
                             <option value="0.5">0.5 (50%)</option>
                             <option value="0.6">0.6 (60%)</option>
                             <option value="0.69">0.69 (69% - Maximum Windows)</option>
+                            <option value="custom">🔧 Enter your own value</option>
                         </select>
+                        <div id="fdwr_set_custom" class="custom-input-group" style="display: none; margin-top: 10px;">
+                            <input type="number" id="fdwr_set_custom_value" step="0.01" min="0" max="1" placeholder="Enter value (0-1)" style="width: 100%; padding: 8px; border: 1px solid #667eea; border-radius: 4px;">
+                            <div class="warning-message" style="display: flex; align-items: center; margin-top: 8px; padding: 8px; background-color: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                                <span style="margin-right: 5px;">⚠️</span>
+                                <small style="color: #856404;">Values outside 0.1-0.69 may cause inaccuracies in the backend model</small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -187,7 +227,15 @@
                             <option value="0.05">0.05 (5%)</option>
                             <option value="0.08">0.08 (8%)</option>
                             <option value="0.1">0.10 (10%)</option>
+                            <option value="custom">🔧 Enter your own value</option>
                         </select>
+                        <div id="srr_set_custom" class="custom-input-group" style="display: none; margin-top: 10px;">
+                            <input type="number" id="srr_set_custom_value" step="0.01" min="0" max="1" placeholder="Enter value (0-1)" style="width: 100%; padding: 8px; border: 1px solid #667eea; border-radius: 4px;">
+                            <div class="warning-message" style="display: flex; align-items: center; margin-top: 8px; padding: 8px; background-color: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+                                <span style="margin-right: 5px;">⚠️</span>
+                                <small style="color: #856404;">Values outside 0.03-0.1 may cause inaccuracies in the backend model</small>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -530,6 +578,58 @@
 
     <script src="app.js"></script>
     <script>
+        // Handle custom value inputs for building parameters
+        const customValueParameters = [
+            'ext_wall_cond',
+            'ext_roof_cond', 
+            'fixed_window_cond',
+            'fixed_wind_solar_trans',
+            'fdwr_set',
+            'srr_set'
+        ];
+
+        customValueParameters.forEach(paramId => {
+            const select = document.getElementById(paramId);
+            const customDiv = document.getElementById(paramId + '_custom');
+            const customInput = document.getElementById(paramId + '_custom_value');
+
+            // Show/hide custom input based on selection
+            select.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customDiv.style.display = 'block';
+                    customInput.required = true;
+                    // Remove required from the select since we'll use custom value
+                    select.required = false;
+                } else {
+                    customDiv.style.display = 'none';
+                    customInput.required = false;
+                    customInput.value = '';
+                    select.required = true;
+                }
+            });
+        });
+
+        // Intercept form submission to handle custom values
+        const originalFormSubmit = document.getElementById('buildingForm').onsubmit;
+        document.getElementById('buildingForm').addEventListener('submit', function(e) {
+            // Replace 'custom' values with the actual custom input values
+            customValueParameters.forEach(paramId => {
+                const select = document.getElementById(paramId);
+                const customInput = document.getElementById(paramId + '_custom_value');
+                
+                if (select.value === 'custom' && customInput.value) {
+                    // Temporarily set the select value to the custom value for form submission
+                    const customValue = customInput.value;
+                    
+                    // Create a temporary option with the custom value
+                    const tempOption = document.createElement('option');
+                    tempOption.value = customValue;
+                    tempOption.selected = true;
+                    select.appendChild(tempOption);
+                }
+            });
+        }, true); // Use capture phase to run before app.js handler
+
         // Handle analysis type radio button change
         document.querySelectorAll('input[name="analysisType"]').forEach(radio => {
             radio.addEventListener('change', function() {

@@ -1596,6 +1596,194 @@ let globalParameterDisplayName = null;
 let globalResults = null;
 let globalSinglePrediction = null;
 
+// Helper function to create high-resolution chart image for PDF
+function getHighResChartImage(canvasId, drawFunction, configs, scale = 3) {
+    // Create a temporary high-resolution canvas
+    const originalCanvas = document.getElementById(canvasId);
+    const tempCanvas = document.createElement('canvas');
+    const ctx = tempCanvas.getContext('2d');
+    
+    // Set high-resolution dimensions (3x or 4x for print quality)
+    const baseWidth = 800;  // Standard width for PDF
+    const baseHeight = 400; // Standard height for PDF
+    tempCanvas.width = baseWidth * scale;
+    tempCanvas.height = baseHeight * scale;
+    
+    // Scale the context to draw at high resolution
+    ctx.scale(scale, scale);
+    
+    const width = baseWidth;
+    const height = baseHeight;
+    const padding = { top: 50, right: 30, bottom: 60, left: 70 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    
+    // Determine which type of chart to draw
+    if (canvasId === 'energyChart') {
+        drawHighResEnergyChart(ctx, configs, width, height, padding, chartWidth, chartHeight);
+    } else if (canvasId === 'costChart') {
+        drawHighResCostChart(ctx, configs, width, height, padding, chartWidth, chartHeight);
+    }
+    
+    // Return the high-resolution image data
+    return tempCanvas.toDataURL('image/png', 1.0);
+}
+
+// Draw high-resolution energy chart
+function drawHighResEnergyChart(ctx, configs, width, height, padding, chartWidth, chartHeight) {
+    const maxEnergy = Math.max(...configs.map(c => c.totalEnergy)) * 1.15;
+    const minEnergy = Math.min(...configs.map(c => c.totalEnergy)) * 0.95;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Draw background grid
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (chartHeight / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(padding.left + chartWidth, y);
+        ctx.stroke();
+    }
+    
+    // Draw bars
+    const barWidth = (chartWidth / configs.length) * 0.65;
+    const barSpacing = chartWidth / configs.length;
+    
+    configs.forEach((config, i) => {
+        const barHeight = ((config.totalEnergy - minEnergy) / (maxEnergy - minEnergy)) * chartHeight;
+        const x = padding.left + i * barSpacing + (barSpacing - barWidth) / 2;
+        const y = padding.top + chartHeight - barHeight;
+        
+        // Draw shadow
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
+        
+        // Draw bar
+        const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, barWidth, barHeight);
+        
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        
+        // Draw value on top
+        ctx.fillStyle = '#2d3748';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(config.totalEnergy.toFixed(4), x + barWidth / 2, y - 8);
+        
+        // Draw label
+        ctx.fillStyle = '#4a5568';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText(`${config.index}`, x + barWidth / 2, padding.top + chartHeight + 25);
+    });
+    
+    // Draw axes
+    ctx.strokeStyle = '#a0aec0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, padding.top);
+    ctx.lineTo(padding.left, padding.top + chartHeight);
+    ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+    ctx.stroke();
+    
+    // Y-axis label
+    ctx.save();
+    ctx.translate(15, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#4a5568';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Energy Use Intensity (GJ/m²)', 0, 0);
+    ctx.restore();
+}
+
+// Draw high-resolution cost chart
+function drawHighResCostChart(ctx, configs, width, height, padding, chartWidth, chartHeight) {
+    const maxCost = Math.max(...configs.map(c => c.totalCost)) * 1.15;
+    const minCost = Math.min(...configs.map(c => c.totalCost)) * 0.95;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Draw background grid
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (chartHeight / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(padding.left + chartWidth, y);
+        ctx.stroke();
+    }
+    
+    // Draw bars
+    const barWidth = (chartWidth / configs.length) * 0.65;
+    const barSpacing = chartWidth / configs.length;
+    
+    configs.forEach((config, i) => {
+        const barHeight = ((config.totalCost - minCost) / (maxCost - minCost)) * chartHeight;
+        const x = padding.left + i * barSpacing + (barSpacing - barWidth) / 2;
+        const y = padding.top + chartHeight - barHeight;
+        
+        // Draw shadow
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
+        
+        // Draw bar
+        const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+        gradient.addColorStop(0, '#48bb78');
+        gradient.addColorStop(1, '#2f855a');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, barWidth, barHeight);
+        
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        
+        // Draw value on top
+        ctx.fillStyle = '#2d3748';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('$' + config.totalCost.toFixed(2), x + barWidth / 2, y - 8);
+        
+        // Draw label
+        ctx.fillStyle = '#4a5568';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText(`${config.index}`, x + barWidth / 2, padding.top + chartHeight + 25);
+    });
+    
+    // Draw axes
+    ctx.strokeStyle = '#a0aec0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, padding.top);
+    ctx.lineTo(padding.left, padding.top + chartHeight);
+    ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+    ctx.stroke();
+    
+    // Y-axis label
+    ctx.save();
+    ctx.translate(15, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#4a5568';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Equipment Cost (CAD/m²)', 0, 0);
+    ctx.restore();
+}
+
+
 // Update the displayAlternativeResults to store configs globally
 function storeConfigsForPDF(configs, parameterDisplayName, results) {
     globalConfigs = configs;
@@ -2139,8 +2327,8 @@ async function downloadPDFReport() {
     doc.text('Energy Use Intensity Comparison', 15, yPos);
     yPos += 10;
     
-    const energyCanvas = document.getElementById('energyChart');
-    const energyImgData = energyCanvas.toDataURL('image/png');
+    // Use high-resolution chart image
+    const energyImgData = getHighResChartImage('energyChart', null, globalConfigs, 3);
     doc.addImage(energyImgData, 'PNG', 15, yPos, 180, 80);
     yPos += 90;
     
@@ -2150,8 +2338,8 @@ async function downloadPDFReport() {
     doc.text('Cost Comparison', 15, yPos);
     yPos += 10;
     
-    const costCanvas = document.getElementById('costChart');
-    const costImgData = costCanvas.toDataURL('image/png');
+    // Use high-resolution chart image
+    const costImgData = getHighResChartImage('costChart', null, globalConfigs, 3);
     doc.addImage(costImgData, 'PNG', 15, yPos, 180, 80);
     yPos += 90;
     
